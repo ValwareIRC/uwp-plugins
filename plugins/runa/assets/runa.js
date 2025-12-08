@@ -218,10 +218,10 @@ When answering questions, use your tools to get accurate, real-time information 
         endpoint = query ? `/api/channels/${encodeURIComponent(query)}` : '/api/channels';
         break;
       case 'bans':
-        endpoint = '/api/server-bans';
+        endpoint = '/api/bans/server';
         break;
       case 'spamfilters':
-        endpoint = '/api/spamfilter';
+        endpoint = '/api/bans/spamfilter';
         break;
       case 'servers':
         endpoint = '/api/servers';
@@ -232,7 +232,11 @@ When answering questions, use your tools to get accurate, real-time information 
 
     try {
       const res = await fetch(endpoint, { headers });
-      return res.ok ? await res.json() : null;
+      if (!res.ok) {
+        console.error(`[Runa] API returned ${res.status} for ${endpoint}`);
+        return null;
+      }
+      return await res.json();
     } catch (e) {
       console.error(`[Runa] Failed to fetch ${type}:`, e);
       return null;
@@ -350,9 +354,62 @@ When answering questions, use your tools to get accurate, real-time information 
   }
 
   async function sendToAI(message) {
+    // Always fetch fresh network context to include in the prompt
+    // This ensures Runa has real data even if the API doesn't support function calling
+    let contextData = '';
+    try {
+      const [users, channels, servers, stats] = await Promise.all([
+        fetchSpecificData('users').catch(() => null),
+        fetchSpecificData('channels').catch(() => null),
+        fetchSpecificData('servers').catch(() => null),
+        fetchNetworkContext().catch(() => null)
+      ]);
+      
+      const contextParts = [];
+      
+      if (users && users.users) {
+        contextParts.push(`**Connected Users (${users.users.length}):**`);
+        users.users.slice(0, 50).forEach(u => {
+          contextParts.push(`- ${u.name} (${u.hostname || 'unknown host'}) - ${u.details?.realname || ''}`);
+        });
+        if (users.users.length > 50) {
+          contextParts.push(`... and ${users.users.length - 50} more users`);
+        }
+      }
+      
+      if (channels && channels.channels) {
+        contextParts.push(`\n**Active Channels (${channels.channels.length}):**`);
+        channels.channels.forEach(c => {
+          contextParts.push(`- ${c.name} (${c.num_users || 0} users) - ${c.topic || 'No topic'}`);
+        });
+      }
+      
+      if (servers && servers.servers) {
+        contextParts.push(`\n**Linked Servers (${servers.servers.length}):**`);
+        servers.servers.forEach(s => {
+          contextParts.push(`- ${s.name}: ${s.info || ''}`);
+        });
+      }
+      
+      if (stats) {
+        contextParts.push(`\n**Network Statistics:**`);
+        contextParts.push(`- Total Users: ${stats.totalUsers || 'unknown'}`);
+        contextParts.push(`- Total Channels: ${stats.totalChannels || 'unknown'}`);
+        contextParts.push(`- Total Servers: ${stats.totalServers || 'unknown'}`);
+      }
+      
+      if (contextParts.length > 0) {
+        contextData = '\n\n---\n## LIVE NETWORK DATA (fetched just now):\n' + contextParts.join('\n');
+      }
+    } catch (err) {
+      console.warn('[Runa] Failed to fetch network context:', err);
+    }
+    
+    const systemPromptWithContext = SYSTEM_PROMPT + contextData;
+    
     const messages = [{
       role: 'system',
-      content: SYSTEM_PROMPT
+      content: systemPromptWithContext
     }];
 
     conversationHistory.forEach(msg => {
@@ -373,7 +430,13 @@ When answering questions, use your tools to get accurate, real-time information 
         response = await callOllama(messages);
         break;
       case 'custom':
-        response = await callCustomAPIWithTools(messages);
+        // Try with tools first, fall back to simple call if it fails
+        try {
+          response = await callCustomAPIWithTools(messages);
+        } catch (toolError) {
+          console.warn('[Runa] Tool-based call failed, trying simple call:', toolError);
+          response = await callCustomAPISimple(messages);
+        }
         break;
       default:
         throw new Error('Unknown API provider');
@@ -384,6 +447,35 @@ When answering questions, use your tools to get accurate, real-time information 
     saveHistory();
 
     return response;
+  }
+  
+  // Simple API call without tools (fallback for APIs that don't support function calling)
+  async function callCustomAPISimple(messages) {
+    const endpoint = config.api_endpoint || DEFAULT_CONFIG.api_endpoint;
+    
+    const headers = { 'Content-Type': 'application/json' };
+    if (config.api_key) {
+      headers['Authorization'] = `Bearer ${config.api_key}`;
+    }
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: config.model || 'openai',
+        messages,
+        max_tokens: 2048,
+        temperature: 0.7
+      })
+    });
+
+    if (!res.ok) {
+      const error = await res.text();
+      throw new Error(`Custom API request failed: ${error}`);
+    }
+
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || 'No response from API';
   }
 
   async function callOpenAIWithTools(messages) {
