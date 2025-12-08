@@ -484,8 +484,7 @@ When answering questions, use your tools to get accurate, real-time information 
       body: JSON.stringify({
         model: config.model || 'openai',
         messages,
-        max_tokens: 2048,
-        temperature: 0.7
+        max_tokens: 2048
       })
     });
 
