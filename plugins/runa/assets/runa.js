@@ -2,7 +2,7 @@
  * Runa - Responsive UnrealIRCd Network Agent
  * An AI-powered assistant for the UnrealIRCd Web Panel
  * 
- * @version 1.0.0
+ * @version 1.1.0
  * @author ValwareIRC
  * @license MIT
  */
@@ -20,11 +20,10 @@
 
   // Default configuration
   const DEFAULT_CONFIG = {
-    api_provider: 'openai',
+    api_provider: 'custom',
     api_key: '',
-    api_endpoint: '',
-    model: 'gpt-4o-mini',
-    keyboard_shortcut: 'r',
+    api_endpoint: 'https://text.pollinations.ai/openai',
+    model: 'openai',
     auto_fetch_context: true,
     max_history: 50
   };
@@ -98,37 +97,22 @@ You are an expert in:
 - **CTCP**: Client-to-client protocol
 - **WHOIS/WHOWAS**: User information queries
 
-## Available Data Sources
-You have access to the following information about the user's IRC network:
-- List of connected users (nick, hostname, IP, channels, modes, connection time)
-- List of channels (name, topic, modes, user count, ban lists)
-- Server bans (G-Lines, K-Lines, Z-Lines, Shuns)
-- Name bans (Q-Lines)
-- Ban exceptions (E-Lines)
+## Current Network Context
+The administrator will provide you with real-time data about their network including:
+- Connected users and their details
+- Active channels and topics
+- Server bans (G-Lines, K-Lines, Z-Lines)
 - Spamfilters
-- Server information and statistics
-- Network topology
+- Server topology
+
+When answering questions, use this context to provide accurate, specific information about THEIR network.
 
 ## Response Guidelines
-
-1. **For informational queries**: Provide clear, formatted answers using the network data
-2. **For action requests**: Explain what action would be needed and any relevant considerations
-3. **For troubleshooting**: Ask clarifying questions if needed, then provide step-by-step guidance
-4. **For security concerns**: Prioritize safety and recommend best practices
-
-## Formatting
-- Use **bold** for important terms
-- Use \`code\` for IRC commands, modes, and technical values
-- Use bullet points for lists
-- Keep responses concise but complete
-- Break complex information into sections
-
-## Current Network Context
-The following context will be provided with each conversation:
-- Network statistics (users online, channels, servers)
-- Recent relevant data based on the user's query
-
-Remember: You're helping real IRC administrators. Be accurate, helpful, and security-conscious.`;
+1. Format responses in Markdown for readability
+2. Use code blocks for commands, configs, or technical output
+3. When listing items (users, channels, bans), use tables or bullet points
+4. If you don't have data about something, say so and suggest how to get it
+5. For dangerous operations (bans, kills), always warn about consequences`;
 
   // ========================================
   // State
@@ -137,14 +121,11 @@ Remember: You're helping real IRC administrators. Be accurate, helpful, and secu
   let config = { ...DEFAULT_CONFIG };
   let conversationHistory = [];
   let networkContext = null;
-  let isVisible = false;
-  let isSettingsVisible = false;
   let isLoading = false;
-  let containerElement = null;
-  let fabElement = null;
+  let currentView = 'chat';
 
   // ========================================
-  // Utility Functions
+  // Configuration Management
   // ========================================
 
   function loadConfig() {
@@ -154,7 +135,7 @@ Remember: You're helping real IRC administrators. Be accurate, helpful, and secu
         config = { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
       }
     } catch (e) {
-      console.warn('[Runa] Failed to load config:', e);
+      console.error('[Runa] Failed to load config:', e);
     }
   }
 
@@ -162,71 +143,41 @@ Remember: You're helping real IRC administrators. Be accurate, helpful, and secu
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
     } catch (e) {
-      console.warn('[Runa] Failed to save config:', e);
+      console.error('[Runa] Failed to save config:', e);
     }
   }
 
   function loadHistory() {
     try {
-      const saved = sessionStorage.getItem(HISTORY_KEY);
+      const saved = localStorage.getItem(HISTORY_KEY);
       if (saved) {
         conversationHistory = JSON.parse(saved);
+        if (conversationHistory.length > config.max_history) {
+          conversationHistory = conversationHistory.slice(-config.max_history);
+        }
       }
     } catch (e) {
-      console.warn('[Runa] Failed to load history:', e);
+      console.error('[Runa] Failed to load history:', e);
     }
   }
 
   function saveHistory() {
     try {
-      // Trim history if too long
       if (conversationHistory.length > config.max_history) {
         conversationHistory = conversationHistory.slice(-config.max_history);
       }
-      sessionStorage.setItem(HISTORY_KEY, JSON.stringify(conversationHistory));
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(conversationHistory));
     } catch (e) {
-      console.warn('[Runa] Failed to save history:', e);
+      console.error('[Runa] Failed to save history:', e);
     }
   }
 
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  function formatMarkdown(text) {
-    // Simple markdown formatting
-    return text
-      // Code blocks
-      .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-      // Inline code
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      // Bold
-      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-      // Italic
-      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-      // Line breaks
-      .replace(/\n/g, '<br>')
-      // Lists (basic)
-      .replace(/^- (.+)$/gm, '• $1');
-  }
-
   // ========================================
-  // API Functions
+  // Network Context Fetching
   // ========================================
 
   async function fetchNetworkContext() {
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
-      console.warn('[Runa] No auth token found');
-      return null;
-    }
-
-    const headers = {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    };
+    const headers = { 'Content-Type': 'application/json' };
 
     try {
       const [statsRes, usersRes, channelsRes] = await Promise.all([
@@ -235,17 +186,17 @@ Remember: You're helping real IRC administrators. Be accurate, helpful, and secu
         fetch('/api/channels?detail=basic', { headers })
       ]);
 
-      const stats = await statsRes.json();
-      const users = await usersRes.json();
-      const channels = await channelsRes.json();
+      const stats = statsRes.ok ? await statsRes.json() : null;
+      const users = usersRes.ok ? await usersRes.json() : [];
+      const channels = channelsRes.ok ? await channelsRes.json() : [];
 
       return {
         stats,
+        users: Array.isArray(users) ? users : [],
+        channels: Array.isArray(channels) ? channels : [],
         userCount: Array.isArray(users) ? users.length : 0,
         channelCount: Array.isArray(channels) ? channels.length : 0,
-        users: Array.isArray(users) ? users.slice(0, 50) : [], // Limit for context
-        channels: Array.isArray(channels) ? channels.slice(0, 50) : [],
-        timestamp: new Date().toISOString()
+        fetchedAt: new Date().toISOString()
       };
     } catch (e) {
       console.error('[Runa] Failed to fetch network context:', e);
@@ -254,98 +205,54 @@ Remember: You're helping real IRC administrators. Be accurate, helpful, and secu
   }
 
   async function fetchSpecificData(type, query = '') {
-    const token = localStorage.getItem('auth_token');
-    if (!token) return null;
+    const headers = { 'Content-Type': 'application/json' };
+    let endpoint;
 
-    const headers = {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    };
+    switch (type) {
+      case 'users':
+        endpoint = query ? `/api/users/${encodeURIComponent(query)}` : '/api/users';
+        break;
+      case 'channels':
+        endpoint = query ? `/api/channels/${encodeURIComponent(query)}` : '/api/channels';
+        break;
+      case 'bans':
+        endpoint = '/api/server-bans';
+        break;
+      case 'spamfilters':
+        endpoint = '/api/spamfilter';
+        break;
+      case 'servers':
+        endpoint = '/api/servers';
+        break;
+      default:
+        return null;
+    }
 
     try {
-      let endpoint = '';
-      switch (type) {
-        case 'users':
-          endpoint = '/api/users?detail=full';
-          break;
-        case 'user':
-          endpoint = `/api/users/${encodeURIComponent(query)}`;
-          break;
-        case 'channels':
-          endpoint = '/api/channels?detail=members';
-          break;
-        case 'channel':
-          endpoint = `/api/channels/${encodeURIComponent(query)}`;
-          break;
-        case 'bans':
-          endpoint = '/api/bans/server';
-          break;
-        case 'namebans':
-          endpoint = '/api/bans/name';
-          break;
-        case 'exceptions':
-          endpoint = '/api/bans/exceptions';
-          break;
-        case 'spamfilters':
-          endpoint = '/api/bans/spamfilter';
-          break;
-        case 'servers':
-          endpoint = '/api/servers';
-          break;
-        case 'stats':
-          endpoint = '/api/stats';
-          break;
-        default:
-          return null;
-      }
-
       const res = await fetch(endpoint, { headers });
-      return await res.json();
+      return res.ok ? await res.json() : null;
     } catch (e) {
       console.error(`[Runa] Failed to fetch ${type}:`, e);
       return null;
     }
   }
 
+  // ========================================
+  // AI API Calls
+  // ========================================
+
   async function sendToAI(message) {
-    if (!config.api_key && config.api_provider !== 'ollama') {
-      throw new Error('API key not configured. Please open settings and enter your API key.');
-    }
+    const messages = [{
+      role: 'system',
+      content: SYSTEM_PROMPT + (networkContext ? `\n\n## Current Network Data\n\`\`\`json\n${JSON.stringify(networkContext, null, 2)}\n\`\`\`` : '')
+    }];
 
-    // Build context message
-    let contextMessage = '';
-    if (networkContext) {
-      contextMessage = `\n\n## Current Network Status\n`;
-      contextMessage += `- **Users Online**: ${networkContext.userCount}\n`;
-      contextMessage += `- **Active Channels**: ${networkContext.channelCount}\n`;
-      if (networkContext.stats) {
-        if (networkContext.stats.operators) {
-          contextMessage += `- **IRC Operators**: ${networkContext.stats.operators}\n`;
-        }
-        if (networkContext.stats.servers) {
-          contextMessage += `- **Linked Servers**: ${networkContext.stats.servers}\n`;
-        }
-      }
-      contextMessage += `\nData refreshed: ${new Date(networkContext.timestamp).toLocaleString()}`;
-    }
-
-    // Build messages array
-    const messages = [
-      { role: 'system', content: SYSTEM_PROMPT + contextMessage }
-    ];
-
-    // Add conversation history
     conversationHistory.forEach(msg => {
-      messages.push({
-        role: msg.role,
-        content: msg.content
-      });
+      messages.push({ role: msg.role, content: msg.content });
     });
 
-    // Add current message
     messages.push({ role: 'user', content: message });
 
-    // Call appropriate API
     let response;
     switch (config.api_provider) {
       case 'openai':
@@ -364,7 +271,6 @@ Remember: You're helping real IRC administrators. Be accurate, helpful, and secu
         throw new Error('Unknown API provider');
     }
 
-    // Store in history
     conversationHistory.push({ role: 'user', content: message });
     conversationHistory.push({ role: 'assistant', content: response });
     saveHistory();
@@ -397,7 +303,6 @@ Remember: You're helping real IRC administrators. Be accurate, helpful, and secu
   }
 
   async function callAnthropic(messages) {
-    // Convert OpenAI format to Anthropic format
     const systemMsg = messages.find(m => m.role === 'system');
     const chatMessages = messages.filter(m => m.role !== 'system');
 
@@ -431,9 +336,7 @@ Remember: You're helping real IRC administrators. Be accurate, helpful, and secu
     
     const res = await fetch(`${endpoint}/api/chat`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: config.model || 'llama3',
         messages: messages,
@@ -454,10 +357,7 @@ Remember: You're helping real IRC administrators. Be accurate, helpful, and secu
       throw new Error('Custom API endpoint not configured');
     }
 
-    // Build headers - only include Authorization if API key is set
-    const headers = {
-      'Content-Type': 'application/json'
-    };
+    const headers = { 'Content-Type': 'application/json' };
     if (config.api_key) {
       headers['Authorization'] = `Bearer ${config.api_key}`;
     }
@@ -479,421 +379,437 @@ Remember: You're helping real IRC administrators. Be accurate, helpful, and secu
     }
 
     const data = await res.json();
-    // Try to handle both OpenAI and custom response formats
     return data.choices?.[0]?.message?.content || data.content?.[0]?.text || data.content || data.response || data.message?.content || data.message;
   }
 
   // ========================================
-  // UI Functions
+  // UI Rendering
   // ========================================
 
-  function createUI() {
-    // Create FAB (floating action button)
-    fabElement = document.createElement('button');
-    fabElement.className = 'runa-fab';
-    fabElement.innerHTML = '🤖';
-    fabElement.title = 'Open Runa AI Assistant (Ctrl+Shift+R)';
-    fabElement.addEventListener('click', toggleChat);
-    document.body.appendChild(fabElement);
+  function renderFullPageUI() {
+    const container = document.getElementById('plugin-content');
+    if (!container) {
+      console.log('[Runa] Plugin content container not found, waiting...');
+      return false;
+    }
 
-    // Create chat container
-    containerElement = document.createElement('div');
-    containerElement.className = 'runa-container';
-    containerElement.innerHTML = `
-      <div class="runa-header">
-        <div class="runa-header-left">
-          <div class="runa-avatar">🤖</div>
-          <div>
-            <div class="runa-title">Runa</div>
-            <div class="runa-subtitle">AI Network Assistant</div>
+    // Hide the placeholder card
+    const card = container.previousElementSibling;
+    if (card && card.classList.contains('card')) {
+      card.style.display = 'none';
+    }
+
+    container.innerHTML = `
+      <div class="runa-app">
+        <div class="runa-sidebar">
+          <div class="runa-sidebar-header">
+            <div class="runa-logo">
+              <span class="runa-logo-icon">🤖</span>
+              <span class="runa-logo-text">Runa</span>
+            </div>
+            <button class="runa-icon-btn" id="runa-new-chat" title="New conversation">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+          
+          <div class="runa-sidebar-nav">
+            <button class="runa-nav-btn active" data-view="chat">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Chat
+            </button>
+            <button class="runa-nav-btn" data-view="settings">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/></svg>
+              Settings
+            </button>
+          </div>
+          
+          <div class="runa-sidebar-status">
+            <div class="runa-context-status" id="runa-context-status">
+              <div class="runa-status-dot"></div>
+              <span>No data loaded</span>
+            </div>
+            <button class="runa-refresh-btn" id="runa-refresh-context">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+              Refresh
+            </button>
           </div>
         </div>
-        <div class="runa-header-actions">
-          <button class="runa-header-btn" data-action="refresh" title="Refresh network data">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-          </button>
-          <button class="runa-header-btn" data-action="clear" title="Clear conversation">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-          </button>
-          <button class="runa-header-btn" data-action="settings" title="Settings">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
-          <button class="runa-header-btn" data-action="minimize" title="Minimize">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
-          </button>
-          <button class="runa-header-btn" data-action="close" title="Close">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-          </button>
-        </div>
-      </div>
-      
-      <div class="runa-messages" id="runa-messages">
-        <div class="runa-welcome">
-          <div class="runa-welcome-avatar">🤖</div>
-          <h3>Hi, I'm Runa! 👋</h3>
-          <p>I'm your AI assistant for managing this IRC network. Ask me anything about users, channels, bans, or server configuration!</p>
-          <div class="runa-suggestions">
-            <button class="runa-suggestion" data-query="How many users are connected right now?">📊 How many users are online?</button>
-            <button class="runa-suggestion" data-query="Show me a summary of the network status">🌐 Network status summary</button>
-            <button class="runa-suggestion" data-query="What channels have the most users?">📢 Popular channels</button>
-            <button class="runa-suggestion" data-query="Are there any active G-Lines?">🛡️ Check active bans</button>
+        
+        <div class="runa-main">
+          <div class="runa-view runa-chat-view active" id="runa-chat-view">
+            <div class="runa-messages" id="runa-messages">
+              <div class="runa-welcome">
+                <div class="runa-welcome-avatar">🤖</div>
+                <h2>Hi, I'm Runa!</h2>
+                <p>Your AI assistant for managing this IRC network. Ask me anything about users, channels, bans, or server configuration!</p>
+                <div class="runa-suggestions">
+                  <button class="runa-suggestion" data-query="How many users are connected right now?">📊 Users online</button>
+                  <button class="runa-suggestion" data-query="Show me a summary of the network status">🌐 Network status</button>
+                  <button class="runa-suggestion" data-query="What channels have the most users?">📢 Popular channels</button>
+                  <button class="runa-suggestion" data-query="Are there any active G-Lines?">🛡️ Active bans</button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="runa-input-area">
+              <div class="runa-input-wrapper">
+                <textarea class="runa-input" id="runa-input" placeholder="Ask Runa anything..." rows="1"></textarea>
+                <button class="runa-send-btn" id="runa-send" title="Send">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                </button>
+              </div>
+              <div class="runa-disclaimer">Runa can make mistakes. Verify important information.</div>
+            </div>
           </div>
-        </div>
-      </div>
-      
-      <div class="runa-settings" id="runa-settings">
-        <h3>⚙️ Settings</h3>
-        
-        <div class="runa-setting-group">
-          <label class="runa-setting-label">AI Provider</label>
-          <select class="runa-setting-select" id="runa-provider">
-            <option value="openai">OpenAI (GPT-4, GPT-3.5)</option>
-            <option value="anthropic">Anthropic (Claude)</option>
-            <option value="ollama">Ollama (Local)</option>
-            <option value="custom">Custom Endpoint</option>
-          </select>
-        </div>
-        
-        <div class="runa-setting-group" id="runa-apikey-group">
-          <label class="runa-setting-label">API Key</label>
-          <div class="runa-setting-help">Required for OpenAI/Anthropic. Optional for custom endpoints.</div>
-          <input type="password" class="runa-setting-input" id="runa-apikey" placeholder="sk-... or leave empty">
-        </div>
-        
-        <div class="runa-setting-group" id="runa-endpoint-group">
-          <label class="runa-setting-label">API Endpoint</label>
-          <div class="runa-setting-help">Required for Ollama/Custom. e.g. https://text.pollinations.ai/openai</div>
-          <input type="text" class="runa-setting-input" id="runa-endpoint" placeholder="https://api.example.com/v1/chat/completions">
-        </div>
-        
-        <div class="runa-setting-group">
-          <label class="runa-setting-label">Model</label>
-          <input type="text" class="runa-setting-input" id="runa-model" placeholder="gpt-4o-mini">
-        </div>
-        
-        <div class="runa-setting-group">
-          <label class="runa-setting-checkbox">
-            <input type="checkbox" id="runa-autofetch">
-            <span>Auto-fetch network data on startup</span>
-          </label>
-        </div>
-        
-        <div class="runa-settings-actions">
-          <button class="runa-btn runa-btn-secondary" id="runa-settings-cancel">Cancel</button>
-          <button class="runa-btn runa-btn-primary" id="runa-settings-save">Save Settings</button>
-        </div>
-      </div>
-      
-      <div class="runa-input-area">
-        <div class="runa-input-wrapper">
-          <textarea class="runa-input" id="runa-input" placeholder="Ask Runa anything..." rows="1"></textarea>
-          <button class="runa-send-btn" id="runa-send" title="Send message">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-          </button>
+          
+          <div class="runa-view runa-settings-view" id="runa-settings-view">
+            <div class="runa-settings-content">
+              <h2>⚙️ Settings</h2>
+              
+              <div class="runa-settings-section">
+                <h3>AI Provider</h3>
+                
+                <div class="runa-field">
+                  <label>Provider</label>
+                  <select id="runa-provider">
+                    <option value="openai">OpenAI (GPT-4, GPT-3.5)</option>
+                    <option value="anthropic">Anthropic (Claude)</option>
+                    <option value="ollama">Ollama (Local)</option>
+                    <option value="custom">Custom Endpoint</option>
+                  </select>
+                </div>
+                
+                <div class="runa-field" id="runa-endpoint-group">
+                  <label>API Endpoint</label>
+                  <input type="text" id="runa-endpoint" placeholder="https://text.pollinations.ai/openai">
+                  <span class="runa-field-help">Required for Ollama/Custom. e.g. https://text.pollinations.ai/openai</span>
+                </div>
+                
+                <div class="runa-field" id="runa-apikey-group">
+                  <label>API Key <span class="runa-optional">(optional)</span></label>
+                  <input type="password" id="runa-apikey" placeholder="sk-... or leave empty">
+                  <span class="runa-field-help">Required for OpenAI/Anthropic. Optional for custom endpoints.</span>
+                </div>
+                
+                <div class="runa-field">
+                  <label>Model</label>
+                  <input type="text" id="runa-model" placeholder="gpt-4o-mini">
+                  <span class="runa-field-help">Model name: gpt-4o-mini, claude-3-5-sonnet, openai, llama3, etc.</span>
+                </div>
+              </div>
+              
+              <div class="runa-settings-section">
+                <h3>Behavior</h3>
+                
+                <div class="runa-field runa-field-checkbox">
+                  <label>
+                    <input type="checkbox" id="runa-autofetch">
+                    Auto-fetch network data on page load
+                  </label>
+                </div>
+                
+                <div class="runa-field">
+                  <label>Max History</label>
+                  <input type="number" id="runa-maxhistory" min="10" max="200" placeholder="50">
+                  <span class="runa-field-help">Maximum messages to keep in history (10-200)</span>
+                </div>
+              </div>
+              
+              <div class="runa-settings-actions">
+                <button class="runa-btn runa-btn-primary" id="runa-settings-save">Save Settings</button>
+                <button class="runa-btn runa-btn-danger" id="runa-clear-history">Clear History</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     `;
-    document.body.appendChild(containerElement);
 
-    // Bind events
     bindEvents();
+    loadSettingsIntoForm();
+    
+    if (conversationHistory.length > 0) {
+      const messagesContainer = document.getElementById('runa-messages');
+      const welcome = messagesContainer.querySelector('.runa-welcome');
+      if (welcome) welcome.remove();
+
+      conversationHistory.forEach(msg => {
+        addMessage(msg.role, msg.content, false);
+      });
+      scrollToBottom();
+    }
+
+    return true;
   }
 
   function bindEvents() {
-    // Header actions
-    containerElement.querySelectorAll('.runa-header-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const action = btn.dataset.action;
-        switch (action) {
-          case 'close':
-            hideChat();
-            break;
-          case 'minimize':
-            containerElement.classList.toggle('minimized');
-            break;
-          case 'settings':
-            toggleSettings();
-            break;
-          case 'clear':
-            clearConversation();
-            break;
-          case 'refresh':
-            refreshContext();
-            break;
-        }
-      });
+    document.querySelectorAll('.runa-nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchView(btn.dataset.view));
     });
 
-    // Suggestions
-    containerElement.querySelectorAll('.runa-suggestion').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const query = btn.dataset.query;
-        sendMessage(query);
-      });
-    });
+    document.getElementById('runa-new-chat').addEventListener('click', clearConversation);
+    document.getElementById('runa-refresh-context').addEventListener('click', refreshContext);
 
-    // Send button
-    document.getElementById('runa-send').addEventListener('click', () => {
-      const input = document.getElementById('runa-input');
-      if (input.value.trim()) {
-        sendMessage(input.value.trim());
+    const input = document.getElementById('runa-input');
+    const sendBtn = document.getElementById('runa-send');
+    
+    sendBtn.addEventListener('click', () => {
+      const msg = input.value.trim();
+      if (msg) {
+        sendMessage(msg);
         input.value = '';
         autoResizeInput(input);
       }
     });
 
-    // Input handling
-    const input = document.getElementById('runa-input');
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        if (input.value.trim() && !isLoading) {
-          sendMessage(input.value.trim());
+        const msg = input.value.trim();
+        if (msg) {
+          sendMessage(msg);
           input.value = '';
           autoResizeInput(input);
         }
       }
     });
+
     input.addEventListener('input', () => autoResizeInput(input));
 
-    // Settings - show/hide fields based on provider
-    document.getElementById('runa-provider').addEventListener('change', (e) => {
-      const provider = e.target.value;
-      const showEndpoint = ['ollama', 'custom'].includes(provider);
-      const showApiKey = ['openai', 'anthropic'].includes(provider);
-      document.getElementById('runa-endpoint-group').style.display = showEndpoint ? 'block' : 'none';
-      document.getElementById('runa-apikey-group').style.display = showApiKey ? 'block' : 'none';
+    document.querySelectorAll('.runa-suggestion').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const query = btn.dataset.query;
+        if (query) sendMessage(query);
+      });
     });
 
-    document.getElementById('runa-settings-save').addEventListener('click', saveSettings);
-    document.getElementById('runa-settings-cancel').addEventListener('click', () => toggleSettings(false));
+    document.getElementById('runa-settings-save').addEventListener('click', saveSettingsFromForm);
+    document.getElementById('runa-clear-history').addEventListener('click', () => {
+      if (confirm('Clear all chat history?')) clearConversation();
+    });
 
-    // Keyboard shortcut
-    document.addEventListener('keydown', handleKeyboardShortcut);
+    document.getElementById('runa-provider').addEventListener('change', updateSettingsVisibility);
+  }
+
+  function switchView(view) {
+    currentView = view;
+    document.querySelectorAll('.runa-nav-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.view === view);
+    });
+    document.querySelectorAll('.runa-view').forEach(v => {
+      v.classList.toggle('active', v.id === `runa-${view}-view`);
+    });
+  }
+
+  function updateSettingsVisibility() {
+    const provider = document.getElementById('runa-provider').value;
+    const showEndpoint = ['ollama', 'custom'].includes(provider);
+    document.getElementById('runa-endpoint-group').style.display = showEndpoint ? 'block' : 'none';
+    // Always show API key field - it's optional for custom
+    document.getElementById('runa-apikey-group').style.display = 'block';
+  }
+
+  function loadSettingsIntoForm() {
+    document.getElementById('runa-provider').value = config.api_provider;
+    document.getElementById('runa-endpoint').value = config.api_endpoint;
+    document.getElementById('runa-apikey').value = config.api_key;
+    document.getElementById('runa-model').value = config.model;
+    document.getElementById('runa-autofetch').checked = config.auto_fetch_context;
+    document.getElementById('runa-maxhistory').value = config.max_history;
+    updateSettingsVisibility();
+  }
+
+  function saveSettingsFromForm() {
+    config.api_provider = document.getElementById('runa-provider').value;
+    config.api_endpoint = document.getElementById('runa-endpoint').value;
+    config.api_key = document.getElementById('runa-apikey').value;
+    config.model = document.getElementById('runa-model').value;
+    config.auto_fetch_context = document.getElementById('runa-autofetch').checked;
+    config.max_history = parseInt(document.getElementById('runa-maxhistory').value) || 50;
+    
+    saveConfig();
+    addSystemMessage('Settings saved! ✓');
+    switchView('chat');
   }
 
   function autoResizeInput(textarea) {
     textarea.style.height = 'auto';
-    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
   }
 
-  function handleKeyboardShortcut(e) {
-    // Check for Ctrl+Shift+[configured key]
-    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === config.keyboard_shortcut.toLowerCase()) {
-      e.preventDefault();
-      toggleChat();
-    }
-    // Escape to close
-    if (e.key === 'Escape' && isVisible) {
-      if (isSettingsVisible) {
-        toggleSettings(false);
-      } else {
-        hideChat();
-      }
-    }
-  }
+  // ========================================
+  // Message Display
+  // ========================================
 
-  function toggleChat() {
-    if (isVisible) {
-      hideChat();
-    } else {
-      showChat();
-    }
-  }
-
-  function showChat() {
-    isVisible = true;
-    containerElement.classList.add('visible');
-    fabElement.classList.add('hidden');
-    document.getElementById('runa-input').focus();
-
-    // Auto-fetch context if enabled and not already fetched
-    if (config.auto_fetch_context && !networkContext) {
-      refreshContext();
-    }
-  }
-
-  function hideChat() {
-    isVisible = false;
-    containerElement.classList.remove('visible');
-    fabElement.classList.remove('hidden');
-  }
-
-  function toggleSettings(show) {
-    if (typeof show === 'boolean') {
-      isSettingsVisible = show;
-    } else {
-      isSettingsVisible = !isSettingsVisible;
-    }
-
-    const settingsPanel = document.getElementById('runa-settings');
-    if (isSettingsVisible) {
-      // Load current values
-      document.getElementById('runa-provider').value = config.api_provider;
-      document.getElementById('runa-apikey').value = config.api_key;
-      document.getElementById('runa-endpoint').value = config.api_endpoint;
-      document.getElementById('runa-model').value = config.model;
-      document.getElementById('runa-autofetch').checked = config.auto_fetch_context;
-      
-      // Show/hide fields based on provider
-      const provider = config.api_provider;
-      const showEndpoint = ['ollama', 'custom'].includes(provider);
-      const showApiKey = ['openai', 'anthropic'].includes(provider);
-      document.getElementById('runa-endpoint-group').style.display = showEndpoint ? 'block' : 'none';
-      document.getElementById('runa-apikey-group').style.display = showApiKey ? 'block' : 'none';
-      
-      settingsPanel.classList.add('visible');
-    } else {
-      settingsPanel.classList.remove('visible');
-    }
-  }
-
-  function saveSettings() {
-    config.api_provider = document.getElementById('runa-provider').value;
-    config.api_key = document.getElementById('runa-apikey').value;
-    config.api_endpoint = document.getElementById('runa-endpoint').value;
-    config.model = document.getElementById('runa-model').value;
-    config.auto_fetch_context = document.getElementById('runa-autofetch').checked;
-    
-    saveConfig();
-    toggleSettings(false);
-    addSystemMessage('Settings saved! ✓');
-  }
-
-  function clearConversation() {
-    conversationHistory = [];
-    saveHistory();
-    
+  function addMessage(role, content, scroll = true) {
     const messagesContainer = document.getElementById('runa-messages');
-    messagesContainer.innerHTML = `
-      <div class="runa-welcome">
-        <div class="runa-welcome-avatar">🤖</div>
-        <h3>Conversation cleared! 🧹</h3>
-        <p>Ready for a fresh start. How can I help you?</p>
-        <div class="runa-suggestions">
-          <button class="runa-suggestion" data-query="How many users are connected right now?">📊 How many users are online?</button>
-          <button class="runa-suggestion" data-query="Show me a summary of the network status">🌐 Network status summary</button>
-          <button class="runa-suggestion" data-query="What channels have the most users?">📢 Popular channels</button>
-          <button class="runa-suggestion" data-query="Are there any active G-Lines?">🛡️ Check active bans</button>
-        </div>
+    if (!messagesContainer) return;
+
+    const welcome = messagesContainer.querySelector('.runa-welcome');
+    if (welcome) welcome.remove();
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `runa-message runa-message-${role}`;
+
+    const avatar = role === 'user' ? '👤' : '🤖';
+    const name = role === 'user' ? 'You' : 'Runa';
+
+    messageDiv.innerHTML = `
+      <div class="runa-message-avatar">${avatar}</div>
+      <div class="runa-message-body">
+        <div class="runa-message-name">${name}</div>
+        <div class="runa-message-content">${role === 'assistant' ? formatMarkdown(content) : escapeHtml(content)}</div>
       </div>
     `;
 
-    // Re-bind suggestion events
-    messagesContainer.querySelectorAll('.runa-suggestion').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const query = btn.dataset.query;
-        sendMessage(query);
-      });
-    });
-  }
-
-  async function refreshContext() {
-    addSystemMessage('Refreshing network data... 🔄');
-    networkContext = await fetchNetworkContext();
-    if (networkContext) {
-      addSystemMessage(`Network data updated! ${networkContext.userCount} users, ${networkContext.channelCount} channels online. ✓`);
-    } else {
-      addSystemMessage('Failed to fetch network data. Are you logged in?', 'error');
-    }
-  }
-
-  function addMessage(role, content) {
-    const messagesContainer = document.getElementById('runa-messages');
-    
-    // Remove welcome message if present
-    const welcome = messagesContainer.querySelector('.runa-welcome');
-    if (welcome) {
-      welcome.remove();
-    }
-
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `runa-message ${role}`;
-    
-    const avatar = role === 'assistant' ? '🤖' : '👤';
-    
-    messageDiv.innerHTML = `
-      <div class="runa-message-avatar">${avatar}</div>
-      <div class="runa-message-content">${formatMarkdown(content)}</div>
-    `;
-
     messagesContainer.appendChild(messageDiv);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    if (scroll) scrollToBottom();
   }
 
   function addSystemMessage(content, type = 'info') {
     const messagesContainer = document.getElementById('runa-messages');
-    
-    const statusDiv = document.createElement('div');
-    statusDiv.className = type === 'error' ? 'runa-error' : 'runa-status';
-    statusDiv.textContent = content;
+    if (!messagesContainer) return;
 
-    messagesContainer.appendChild(statusDiv);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-    // Auto-remove status messages after a delay
-    if (type !== 'error') {
-      setTimeout(() => statusDiv.remove(), 5000);
-    }
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `runa-system-message runa-system-${type}`;
+    messageDiv.textContent = content;
+    messagesContainer.appendChild(messageDiv);
+    scrollToBottom();
   }
 
   function showTypingIndicator() {
     const messagesContainer = document.getElementById('runa-messages');
-    
-    const typingDiv = document.createElement('div');
-    typingDiv.className = 'runa-message assistant';
-    typingDiv.id = 'runa-typing';
-    typingDiv.innerHTML = `
+    if (!messagesContainer) return;
+
+    const indicator = document.createElement('div');
+    indicator.className = 'runa-message runa-message-assistant runa-typing';
+    indicator.id = 'runa-typing';
+    indicator.innerHTML = `
       <div class="runa-message-avatar">🤖</div>
-      <div class="runa-message-content">
-        <div class="runa-typing">
-          <div class="runa-typing-dot"></div>
-          <div class="runa-typing-dot"></div>
-          <div class="runa-typing-dot"></div>
-        </div>
+      <div class="runa-message-body">
+        <div class="runa-message-name">Runa</div>
+        <div class="runa-typing-indicator"><span></span><span></span><span></span></div>
       </div>
     `;
-
-    messagesContainer.appendChild(typingDiv);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    messagesContainer.appendChild(indicator);
+    scrollToBottom();
   }
 
   function hideTypingIndicator() {
-    const typing = document.getElementById('runa-typing');
-    if (typing) typing.remove();
+    const indicator = document.getElementById('runa-typing');
+    if (indicator) indicator.remove();
   }
+
+  function scrollToBottom() {
+    const messagesContainer = document.getElementById('runa-messages');
+    if (messagesContainer) {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function formatMarkdown(text) {
+    let html = escapeHtml(text);
+    
+    // Code blocks
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    
+    // Bold/Italic
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    
+    // Headers
+    html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+    html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+    
+    // Lists
+    html = html.replace(/^[\*\-] (.+)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+    
+    // Line breaks
+    html = html.replace(/\n/g, '<br>');
+    
+    return html;
+  }
+
+  // ========================================
+  // Context Management
+  // ========================================
+
+  function updateContextStatus() {
+    const statusEl = document.getElementById('runa-context-status');
+    if (!statusEl) return;
+
+    if (networkContext) {
+      statusEl.innerHTML = `
+        <div class="runa-status-dot active"></div>
+        <span>${networkContext.userCount} users, ${networkContext.channelCount} ch</span>
+      `;
+    } else {
+      statusEl.innerHTML = `
+        <div class="runa-status-dot"></div>
+        <span>No data loaded</span>
+      `;
+    }
+  }
+
+  async function refreshContext() {
+    const btn = document.getElementById('runa-refresh-context');
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add('loading');
+    }
+
+    networkContext = await fetchNetworkContext();
+    updateContextStatus();
+
+    if (btn) {
+      btn.disabled = false;
+      btn.classList.remove('loading');
+    }
+
+    if (networkContext) {
+      addSystemMessage(`Loaded: ${networkContext.userCount} users, ${networkContext.channelCount} channels`);
+    } else {
+      addSystemMessage('Failed to fetch network data', 'error');
+    }
+  }
+
+  // ========================================
+  // Message Sending
+  // ========================================
 
   async function sendMessage(message) {
     if (isLoading) return;
 
-    // Check if API is configured (API key only required for openai/anthropic)
-    const requiresApiKey = config.api_provider === 'openai' || config.api_provider === 'anthropic';
-    if (requiresApiKey && !config.api_key) {
-      addSystemMessage('Please configure your API key in settings first!', 'error');
-      toggleSettings(true);
+    const provider = config.api_provider;
+    if ((provider === 'openai' || provider === 'anthropic') && !config.api_key) {
+      addSystemMessage('Please configure your API key in settings!', 'error');
+      switchView('settings');
       return;
     }
-    
-    // Custom endpoint required for custom/ollama providers
-    if ((config.api_provider === 'custom' || config.api_provider === 'ollama') && !config.api_endpoint) {
-      addSystemMessage('Please configure the API endpoint in settings first!', 'error');
-      toggleSettings(true);
+    if ((provider === 'custom' || provider === 'ollama') && !config.api_endpoint) {
+      addSystemMessage('Please configure the API endpoint in settings!', 'error');
+      switchView('settings');
       return;
     }
 
     isLoading = true;
-    document.getElementById('runa-send').disabled = true;
+    const sendBtn = document.getElementById('runa-send');
+    if (sendBtn) sendBtn.disabled = true;
 
-    // Add user message
     addMessage('user', message);
-
-    // Show typing indicator
     showTypingIndicator();
 
     try {
-      // Check if this is a data-specific query that needs fresh data
       await checkAndFetchRelevantData(message);
-
       const response = await sendToAI(message);
       hideTypingIndicator();
       addMessage('assistant', response);
@@ -903,14 +819,13 @@ Remember: You're helping real IRC administrators. Be accurate, helpful, and secu
       console.error('[Runa] AI request failed:', error);
     } finally {
       isLoading = false;
-      document.getElementById('runa-send').disabled = false;
+      if (sendBtn) sendBtn.disabled = false;
     }
   }
 
   async function checkAndFetchRelevantData(message) {
     const lowerMsg = message.toLowerCase();
     
-    // Keywords that suggest we need fresh data
     if (lowerMsg.includes('user') || lowerMsg.includes('nick') || lowerMsg.includes('who')) {
       const users = await fetchSpecificData('users');
       if (users && networkContext) {
@@ -947,74 +862,113 @@ Remember: You're helping real IRC administrators. Be accurate, helpful, and secu
         networkContext.servers = Array.isArray(servers) ? servers : [];
       }
     }
+    
+    updateContextStatus();
+  }
+
+  function clearConversation() {
+    conversationHistory = [];
+    saveHistory();
+    
+    const messagesContainer = document.getElementById('runa-messages');
+    if (messagesContainer) {
+      messagesContainer.innerHTML = `
+        <div class="runa-welcome">
+          <div class="runa-welcome-avatar">🤖</div>
+          <h2>Hi, I'm Runa!</h2>
+          <p>Your AI assistant for managing this IRC network. Ask me anything about users, channels, bans, or server configuration!</p>
+          <div class="runa-suggestions">
+            <button class="runa-suggestion" data-query="How many users are connected right now?">📊 Users online</button>
+            <button class="runa-suggestion" data-query="Show me a summary of the network status">🌐 Network status</button>
+            <button class="runa-suggestion" data-query="What channels have the most users?">📢 Popular channels</button>
+            <button class="runa-suggestion" data-query="Are there any active G-Lines?">🛡️ Active bans</button>
+          </div>
+        </div>
+      `;
+      
+      messagesContainer.querySelectorAll('.runa-suggestion').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const query = btn.dataset.query;
+          if (query) sendMessage(query);
+        });
+      });
+    }
   }
 
   // ========================================
-  // Cleanup
+  // Cleanup & Initialization
   // ========================================
 
   function cleanup() {
-    document.removeEventListener('keydown', handleKeyboardShortcut);
-    
-    if (containerElement) {
-      containerElement.remove();
-      containerElement = null;
+    const container = document.getElementById('plugin-content');
+    if (container) {
+      container.innerHTML = '';
+      const card = container.previousElementSibling;
+      if (card && card.classList.contains('card')) {
+        card.style.display = '';
+      }
     }
-    
-    if (fabElement) {
-      fabElement.remove();
-      fabElement = null;
-    }
-
     console.log('[Runa] Plugin unloaded');
   }
-
-  // ========================================
-  // Initialization
-  // ========================================
 
   function init() {
     console.log(`[${PLUGIN_NAME}] Initializing...`);
     
     loadConfig();
     loadHistory();
-    createUI();
-
-    // Restore conversation if exists
-    if (conversationHistory.length > 0) {
-      const messagesContainer = document.getElementById('runa-messages');
-      const welcome = messagesContainer.querySelector('.runa-welcome');
-      if (welcome) welcome.remove();
-
-      conversationHistory.forEach(msg => {
-        addMessage(msg.role, msg.content);
-      });
+    
+    if (window.location.pathname.includes('/plugins/runa')) {
+      if (!renderFullPageUI()) {
+        const observer = new MutationObserver((mutations, obs) => {
+          if (document.getElementById('plugin-content')) {
+            renderFullPageUI();
+            obs.disconnect();
+            if (config.auto_fetch_context) refreshContext();
+          }
+        });
+        
+        observer.observe(document.body, { childList: true, subtree: true });
+        setTimeout(() => {
+          observer.disconnect();
+          if (document.getElementById('plugin-content')) {
+            renderFullPageUI();
+            if (config.auto_fetch_context) refreshContext();
+          }
+        }, 2000);
+      } else {
+        if (config.auto_fetch_context) refreshContext();
+      }
     }
 
-    console.log(`[${PLUGIN_NAME}] Initialized successfully!`);
+    console.log(`[${PLUGIN_NAME}] Initialized!`);
   }
 
-  // Initialize when DOM is ready
+  // SPA navigation detection
+  let lastPath = window.location.pathname;
+  setInterval(() => {
+    if (window.location.pathname !== lastPath) {
+      lastPath = window.location.pathname;
+      if (lastPath.includes('/plugins/runa')) {
+        setTimeout(() => {
+          if (!document.querySelector('.runa-app')) {
+            renderFullPageUI();
+            if (config.auto_fetch_context) refreshContext();
+          }
+        }, 100);
+      }
+    }
+  }, 500);
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
   }
 
-  // Expose for debugging and cleanup
-  window.Runa = {
-    toggle: toggleChat,
-    show: showChat,
-    hide: hideChat,
-    clearHistory: clearConversation,
-    refreshContext: refreshContext,
-    getConfig: () => ({ ...config }),
-    cleanup: cleanup
-  };
+  window.Runa = { switchView, clearHistory: clearConversation, refreshContext, getConfig: () => ({ ...config }), cleanup };
 
-  // Register with UWP plugin system if available
   if (window.UWPPlugins) {
-    window.UWPPlugins.register(PLUGIN_ID, { cleanup: cleanup });
+    window.UWPPlugins.register(PLUGIN_ID, { cleanup });
   }
 
 })();

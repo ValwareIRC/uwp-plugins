@@ -1,7 +1,7 @@
 {
   "id": "runa",
   "name": "Runa - AI Network Assistant",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "ValwareIRC",
   "description": "Responsive UnrealIRCd Network Agent - An AI-powered assistant that can help you manage your IRC network using natural language",
   "category": "management",
@@ -15,22 +15,13 @@
     {
       "id": "runa-assistant",
       "label": "Runa AI",
-      "icon": "MessageSquare",
+      "icon": "Bot",
       "path": "/plugins/runa",
       "category": "Tools",
       "order": 50
     }
   ],
-  "dashboard_cards": [
-    {
-      "id": "runa-quick-access",
-      "title": "Runa AI Assistant",
-      "icon": "MessageSquare",
-      "type": "info",
-      "content": "Ask Runa anything about your IRC network! Press Ctrl+Shift+R to open the chat.",
-      "order": 90
-    }
-  ],
+  "dashboard_cards": [],
   "frontend_scripts": [
     "runa.js"
   ],
