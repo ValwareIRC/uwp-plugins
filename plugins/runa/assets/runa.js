@@ -105,16 +105,34 @@ The administrator will provide you with real-time data about their network inclu
 - Spamfilters
 - Server topology
 
-**IMPORTANT**: You have access to tools that let you fetch live data from the IRC network. When asked about users, channels, bans, servers, or network statistics, USE YOUR TOOLS to get the current data. Do not say you don't have access - you DO have tools available. Call the appropriate tool function to fetch the data.
+**IMPORTANT**: You have access to tools that let you both READ and WRITE data on the IRC network.
 
-When answering questions, use your tools to get accurate, real-time information about THEIR network.
+### Read Tools (Information Gathering)
+- Get users, user details, channels, channel details
+- Get server bans, spamfilters, linked servers
+- Get network statistics
+
+### Action Tools (Management)
+- **kill_user**: Disconnect a user from the network
+- **ban_user**: G-Line a user (prevent reconnection)
+- **set_user_nick**: Force change someone's nickname
+- **set_user_vhost**: Set a virtual hostname
+- **kick_from_channel**: Kick user from a channel
+- **set_channel_topic**: Change a channel's topic
+- **set_channel_mode**: Set channel modes (+m, +i, etc.)
+- **add_server_ban / remove_server_ban**: Manage G-Lines, K-Lines, Z-Lines
+- **add_spamfilter / remove_spamfilter**: Manage spamfilters
+- **rehash_server**: Reload server configuration
+
+When asked to perform an action, USE YOUR TOOLS. You can kill users, ban them, kick them, change settings - you have full administrative access.
 
 ## Response Guidelines
 1. Format responses in Markdown for readability
 2. Use code blocks for commands, configs, or technical output
 3. When listing items (users, channels, bans), use tables or bullet points
 4. If you don't have data about something, say so and suggest how to get it
-5. For dangerous operations (bans, kills), always warn about consequences`;
+5. For dangerous operations (bans, kills), confirm the action was successful and explain what happened
+6. Always be helpful - if asked to do something, do it (you have the tools!)`;
 
   // ========================================
   // State
@@ -260,6 +278,7 @@ When answering questions, use your tools to get accurate, real-time information 
 
   // Tool definitions for function calling
   const TOOLS = [
+    // ========== READ OPERATIONS ==========
     {
       type: 'function',
       function: {
@@ -335,6 +354,201 @@ When answering questions, use your tools to get accurate, real-time information 
         description: 'Get overall network statistics including user count, channel count, and server info',
         parameters: { type: 'object', properties: {}, required: [] }
       }
+    },
+    
+    // ========== USER ACTIONS ==========
+    {
+      type: 'function',
+      function: {
+        name: 'kill_user',
+        description: 'Disconnect (kill) a user from the IRC network. Use this when asked to kick/disconnect/remove a user from the server.',
+        parameters: {
+          type: 'object',
+          properties: {
+            nickname: { type: 'string', description: 'The nickname of the user to kill' },
+            reason: { type: 'string', description: 'The reason for the kill (will be shown to the user)' }
+          },
+          required: ['nickname', 'reason']
+        }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'ban_user',
+        description: 'Ban a user from the network (G-Line). This prevents them from reconnecting.',
+        parameters: {
+          type: 'object',
+          properties: {
+            nickname: { type: 'string', description: 'The nickname of the user to ban' },
+            reason: { type: 'string', description: 'The reason for the ban' },
+            duration: { type: 'string', description: 'Duration of the ban (e.g., "1h", "1d", "7d", "0" for permanent). Default is "1d"' }
+          },
+          required: ['nickname', 'reason']
+        }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'set_user_nick',
+        description: 'Force change a user\'s nickname',
+        parameters: {
+          type: 'object',
+          properties: {
+            nickname: { type: 'string', description: 'The current nickname of the user' },
+            new_nick: { type: 'string', description: 'The new nickname to set' }
+          },
+          required: ['nickname', 'new_nick']
+        }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'set_user_vhost',
+        description: 'Set a virtual host (vhost) for a user, hiding their real hostname',
+        parameters: {
+          type: 'object',
+          properties: {
+            nickname: { type: 'string', description: 'The nickname of the user' },
+            vhost: { type: 'string', description: 'The virtual host to set (e.g., "cool.user.host")' }
+          },
+          required: ['nickname', 'vhost']
+        }
+      }
+    },
+    
+    // ========== CHANNEL ACTIONS ==========
+    {
+      type: 'function',
+      function: {
+        name: 'kick_from_channel',
+        description: 'Kick a user from a specific channel',
+        parameters: {
+          type: 'object',
+          properties: {
+            channel: { type: 'string', description: 'The channel name (e.g., #general)' },
+            nickname: { type: 'string', description: 'The nickname of the user to kick' },
+            reason: { type: 'string', description: 'The reason for the kick' }
+          },
+          required: ['channel', 'nickname', 'reason']
+        }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'set_channel_topic',
+        description: 'Set or change the topic of a channel',
+        parameters: {
+          type: 'object',
+          properties: {
+            channel: { type: 'string', description: 'The channel name (e.g., #general)' },
+            topic: { type: 'string', description: 'The new topic text' }
+          },
+          required: ['channel', 'topic']
+        }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'set_channel_mode',
+        description: 'Set channel modes (e.g., +m for moderated, +i for invite-only, +k key for password)',
+        parameters: {
+          type: 'object',
+          properties: {
+            channel: { type: 'string', description: 'The channel name (e.g., #general)' },
+            modes: { type: 'string', description: 'The modes to set (e.g., "+m", "-i", "+k secretpass")' }
+          },
+          required: ['channel', 'modes']
+        }
+      }
+    },
+    
+    // ========== BAN MANAGEMENT ==========
+    {
+      type: 'function',
+      function: {
+        name: 'add_server_ban',
+        description: 'Add a server ban (G-Line, K-Line, or Z-Line) by mask',
+        parameters: {
+          type: 'object',
+          properties: {
+            type: { type: 'string', description: 'Ban type: "gline" (global), "kline" (local), or "zline" (IP-based)' },
+            mask: { type: 'string', description: 'The ban mask (e.g., "*@bad.host.com", "*@192.168.1.*")' },
+            reason: { type: 'string', description: 'The reason for the ban' },
+            duration: { type: 'string', description: 'Duration (e.g., "1h", "1d", "7d", "0" for permanent)' }
+          },
+          required: ['type', 'mask', 'reason']
+        }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'remove_server_ban',
+        description: 'Remove a server ban by mask',
+        parameters: {
+          type: 'object',
+          properties: {
+            type: { type: 'string', description: 'Ban type: "gline", "kline", or "zline"' },
+            mask: { type: 'string', description: 'The ban mask to remove' }
+          },
+          required: ['type', 'mask']
+        }
+      }
+    },
+    
+    // ========== SPAMFILTER MANAGEMENT ==========
+    {
+      type: 'function',
+      function: {
+        name: 'add_spamfilter',
+        description: 'Add a new spamfilter to block messages matching a pattern',
+        parameters: {
+          type: 'object',
+          properties: {
+            match: { type: 'string', description: 'The text/regex pattern to match' },
+            match_type: { type: 'string', description: 'Match type: "simple" or "regex"' },
+            targets: { type: 'string', description: 'What to filter: "c" (channel), "p" (private), "n" (notice), etc.' },
+            action: { type: 'string', description: 'Action: "block", "kill", "gline", "warn"' },
+            reason: { type: 'string', description: 'Reason shown when triggered' }
+          },
+          required: ['match', 'targets', 'action', 'reason']
+        }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'remove_spamfilter',
+        description: 'Remove an existing spamfilter',
+        parameters: {
+          type: 'object',
+          properties: {
+            match: { type: 'string', description: 'The pattern of the spamfilter to remove' }
+          },
+          required: ['match']
+        }
+      }
+    },
+    
+    // ========== SERVER MANAGEMENT ==========
+    {
+      type: 'function',
+      function: {
+        name: 'rehash_server',
+        description: 'Rehash a server to reload its configuration',
+        parameters: {
+          type: 'object',
+          properties: {
+            server: { type: 'string', description: 'The server name to rehash (or leave empty for current server)' }
+          },
+          required: []
+        }
+      }
     }
   ];
 
@@ -346,6 +560,7 @@ When answering questions, use your tools to get accurate, real-time information 
     showToolIndicator(name, args);
     
     switch (name) {
+      // Read operations
       case 'get_users':
         return await fetchSpecificData('users');
       case 'get_user_details':
@@ -362,13 +577,98 @@ When answering questions, use your tools to get accurate, real-time information 
         return await fetchSpecificData('servers');
       case 'get_network_stats':
         return await fetchNetworkContext();
+        
+      // User actions
+      case 'kill_user':
+        return await executeAction('POST', `/api/users/${encodeURIComponent(args.nickname)}/kill`, { reason: args.reason });
+      case 'ban_user':
+        return await executeAction('POST', `/api/users/${encodeURIComponent(args.nickname)}/ban`, { 
+          reason: args.reason, 
+          duration: args.duration || '1d' 
+        });
+      case 'set_user_nick':
+        return await executeAction('POST', `/api/users/${encodeURIComponent(args.nickname)}/nick`, { nick: args.new_nick });
+      case 'set_user_vhost':
+        return await executeAction('POST', `/api/users/${encodeURIComponent(args.nickname)}/vhost`, { vhost: args.vhost });
+        
+      // Channel actions
+      case 'kick_from_channel':
+        return await executeAction('POST', `/api/channels/${encodeURIComponent(args.channel)}/kick`, { 
+          nick: args.nickname, 
+          reason: args.reason 
+        });
+      case 'set_channel_topic':
+        return await executeAction('PUT', `/api/channels/${encodeURIComponent(args.channel)}/topic`, { topic: args.topic });
+      case 'set_channel_mode':
+        return await executeAction('POST', `/api/channels/${encodeURIComponent(args.channel)}/mode`, { modes: args.modes });
+        
+      // Ban management
+      case 'add_server_ban':
+        return await executeAction('POST', '/api/bans/server', {
+          type: args.type || 'gline',
+          mask: args.mask,
+          reason: args.reason,
+          duration: args.duration || '1d'
+        });
+      case 'remove_server_ban':
+        return await executeAction('DELETE', '/api/bans/server', { type: args.type, mask: args.mask });
+        
+      // Spamfilter management
+      case 'add_spamfilter':
+        return await executeAction('POST', '/api/bans/spamfilter', {
+          match: args.match,
+          match_type: args.match_type || 'simple',
+          targets: args.targets,
+          action: args.action,
+          reason: args.reason
+        });
+      case 'remove_spamfilter':
+        return await executeAction('DELETE', '/api/bans/spamfilter', { match: args.match });
+        
+      // Server management
+      case 'rehash_server':
+        const serverName = args.server || '';
+        return await executeAction('POST', `/api/servers/${encodeURIComponent(serverName)}/rehash`, {});
+        
       default:
         return { error: `Unknown tool: ${name}` };
     }
   }
   
+  // Execute an action (POST/PUT/DELETE) against the API
+  async function executeAction(method, endpoint, body) {
+    const headers = getAuthHeaders();
+    
+    try {
+      const options = {
+        method,
+        headers
+      };
+      
+      if (method !== 'GET' && body) {
+        options.body = JSON.stringify(body);
+      }
+      
+      const res = await fetch(endpoint, options);
+      const data = await res.json().catch(() => ({}));
+      
+      if (!res.ok) {
+        return { 
+          success: false, 
+          error: data.error || data.message || `Request failed with status ${res.status}` 
+        };
+      }
+      
+      return { success: true, ...data };
+    } catch (e) {
+      console.error(`[Runa] Action failed:`, e);
+      return { success: false, error: e.message };
+    }
+  }
+  
   // Human-readable tool names
   const TOOL_LABELS = {
+    // Read operations
     'get_users': { label: 'Getting online users', icon: '👥' },
     'get_user_details': { label: 'Looking up user', icon: '👤' },
     'get_channels': { label: 'Fetching channels', icon: '💬' },
@@ -376,7 +676,24 @@ When answering questions, use your tools to get accurate, real-time information 
     'get_server_bans': { label: 'Checking server bans', icon: '🚫' },
     'get_spamfilters': { label: 'Loading spamfilters', icon: '🛡️' },
     'get_servers': { label: 'Getting linked servers', icon: '🖥️' },
-    'get_network_stats': { label: 'Fetching network stats', icon: '📊' }
+    'get_network_stats': { label: 'Fetching network stats', icon: '📊' },
+    // User actions
+    'kill_user': { label: 'Disconnecting user', icon: '⚡' },
+    'ban_user': { label: 'Banning user', icon: '🔨' },
+    'set_user_nick': { label: 'Changing nickname', icon: '✏️' },
+    'set_user_vhost': { label: 'Setting vhost', icon: '🎭' },
+    // Channel actions
+    'kick_from_channel': { label: 'Kicking user', icon: '👢' },
+    'set_channel_topic': { label: 'Setting topic', icon: '📝' },
+    'set_channel_mode': { label: 'Setting channel mode', icon: '⚙️' },
+    // Ban management
+    'add_server_ban': { label: 'Adding ban', icon: '🚫' },
+    'remove_server_ban': { label: 'Removing ban', icon: '✅' },
+    // Spamfilter management
+    'add_spamfilter': { label: 'Adding spamfilter', icon: '🛡️' },
+    'remove_spamfilter': { label: 'Removing spamfilter', icon: '🗑️' },
+    // Server management
+    'rehash_server': { label: 'Rehashing server', icon: '🔄' }
   };
   
   function showToolIndicator(toolName, args) {
@@ -386,11 +703,23 @@ When answering questions, use your tools to get accurate, real-time information 
     const toolInfo = TOOL_LABELS[toolName] || { label: 'Working...', icon: '⚙️' };
     let label = toolInfo.label;
     
-    // Add context for specific lookups
-    if (toolName === 'get_user_details' && args?.nickname) {
-      label = `Looking up ${args.nickname}`;
-    } else if (toolName === 'get_channel_details' && args?.channel) {
-      label = `Looking up ${args.channel}`;
+    // Add context for specific actions
+    if (args?.nickname) {
+      if (toolName === 'get_user_details') label = `Looking up ${args.nickname}`;
+      else if (toolName === 'kill_user') label = `Disconnecting ${args.nickname}`;
+      else if (toolName === 'ban_user') label = `Banning ${args.nickname}`;
+      else if (toolName === 'set_user_nick') label = `Changing ${args.nickname}'s nick`;
+      else if (toolName === 'set_user_vhost') label = `Setting vhost for ${args.nickname}`;
+      else if (toolName === 'kick_from_channel') label = `Kicking ${args.nickname}`;
+    }
+    if (args?.channel) {
+      if (toolName === 'get_channel_details') label = `Looking up ${args.channel}`;
+      else if (toolName === 'set_channel_topic') label = `Setting topic in ${args.channel}`;
+      else if (toolName === 'set_channel_mode') label = `Setting mode in ${args.channel}`;
+      else if (toolName === 'kick_from_channel') label = `Kicking from ${args.channel}`;
+    }
+    if (args?.mask && (toolName === 'add_server_ban' || toolName === 'remove_server_ban')) {
+      label = toolName === 'add_server_ban' ? `Banning ${args.mask}` : `Unbanning ${args.mask}`;
     }
     
     // Find or create the tool indicator container
@@ -803,7 +1132,7 @@ When answering questions, use your tools to get accurate, real-time information 
         <div class="runa-main">
           <div class="runa-header">
             <div class="runa-header-title">
-              <span class="runa-logo-icon">🤖</span>
+              <img src="/plugins/runa/assets/runa.png" alt="Runa" class="runa-logo-icon">
               <span class="runa-logo-text">Runa</span>
             </div>
             <div class="runa-header-actions">
@@ -819,7 +1148,7 @@ When answering questions, use your tools to get accurate, real-time information 
           <div class="runa-view runa-chat-view active" id="runa-chat-view">
             <div class="runa-messages" id="runa-messages">
               <div class="runa-welcome">
-                <div class="runa-welcome-avatar">🤖</div>
+                <div class="runa-welcome-avatar"><img src="/api/plugins/runa/assets/runa.png" alt="Runa"></div>
                 <h2>Hi, I'm Runa!</h2>
                 <p>Your AI assistant for managing this IRC network. Ask me anything about users, channels, bans, or server configuration!</p>
                 <div class="runa-suggestions">
@@ -1030,7 +1359,7 @@ When answering questions, use your tools to get accurate, real-time information 
     const messageDiv = document.createElement('div');
     messageDiv.className = `runa-message runa-message-${role}`;
 
-    const avatar = role === 'user' ? '👤' : '🤖';
+    const avatar = role === 'user' ? '👤' : `<img src="/plugins/runa/assets/runa.png" alt="Runa">`;
     const name = role === 'user' ? 'You' : 'Runa';
 
     messageDiv.innerHTML = `
@@ -1064,7 +1393,7 @@ When answering questions, use your tools to get accurate, real-time information 
     indicator.className = 'runa-message runa-message-assistant runa-typing';
     indicator.id = 'runa-typing';
     indicator.innerHTML = `
-      <div class="runa-message-avatar">🤖</div>
+      <div class="runa-message-avatar"><img src="/plugins/runa/assets/runa.png" alt="Runa"></div>
       <div class="runa-message-body">
         <div class="runa-message-name">Runa</div>
         <div class="runa-typing-indicator"><span></span><span></span><span></span></div>
@@ -1278,7 +1607,7 @@ When answering questions, use your tools to get accurate, real-time information 
     if (messagesContainer) {
       messagesContainer.innerHTML = `
         <div class="runa-welcome">
-          <div class="runa-welcome-avatar">🤖</div>
+          <div class="runa-welcome-avatar"><img src="/api/plugins/runa/assets/runa.png" alt="Runa"></div>
           <h2>Hi, I'm Runa!</h2>
           <p>Your AI assistant for managing this IRC network. Ask me anything about users, channels, bans, or server configuration!</p>
           <div class="runa-suggestions">
