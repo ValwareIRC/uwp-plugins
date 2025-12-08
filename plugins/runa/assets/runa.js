@@ -610,7 +610,6 @@ When answering questions, use your tools to get accurate, real-time information 
     
     throw new Error('Too many tool call iterations');
   }
-  }
 
   // ========================================
   // UI Rendering
