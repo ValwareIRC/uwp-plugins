@@ -49,9 +49,9 @@
 }
 
 .runa-logo-icon img {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
 }
 
 .runa-logo-text {
@@ -143,9 +143,9 @@
 }
 
 .runa-welcome-avatar img {
-  width: 80px;
-  height: 80px;
-  border-radius: 16px;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
 }
 
 .runa-welcome h2 {
