@@ -1,32 +1,82 @@
 {
-  "version": 2,
-  "generated_at": "2025-12-08T01:30:00Z",
-  "plugins": [
-    {
-      "id": "example-plugin",
-      "name": "Example Plugin",
-      "version": "1.0.0",
-      "author": "ValwareIRC",
-      "description": "A demonstration plugin showing how to extend the UnrealIRCd Web Panel with custom navigation items, dashboard cards, API endpoints, and hook callbacks.",
-      "category": "utilities",
-      "license": "MIT",
-      "repository": "https://github.com/ValwareIRC/uwp-plugins",
-      "tags": ["example", "demo", "tutorial", "hooks", "starter"],
-      "min_panel_version": "2.0.0",
-      "provides": ["nav-items", "dashboard-cards", "api-routes", "hooks-demo"]
-    },
-    {
-      "id": "emoji-trail",
-      "name": "Emoji Trail",
-      "version": "1.0.0",
-      "author": "ValwareIRC",
-      "description": "Adds delightful emoji fireworks that burst from your cursor when you press the 'E' key. A fun visual enhancement for your admin panel!",
-      "category": "fun",
-      "license": "MIT",
-      "repository": "https://github.com/ValwareIRC/uwp-plugins",
-      "tags": ["fun", "emoji", "effects", "visual", "fireworks", "easter-egg"],
-      "min_panel_version": "2.0.0",
-      "provides": ["visual-effects", "keyboard-shortcuts"]
-    }
-  ]
+    "plugins": [
+        {
+            "id": "example-plugin",
+            "name": "Example Plugin",
+            "version": "1.0.0",
+            "description": "A comprehensive example plugin demonstrating all features of the UWP plugin system including hooks, navigation items, dashboard cards, and frontend JavaScript.",
+            "author": "Valware",
+            "license": "MIT",
+            "homepage": "https://github.com/ValwareIRC/uwp-plugins",
+            "min_panel_version": "1.0.0",
+            "hooks": ["OnStartup", "OnShutdown", "OnUserListRequest", "OnChannelListRequest"],
+            "nav_items": [
+                {
+                    "id": "example-plugin-demo",
+                    "label": "Plugin Demo",
+                    "icon": "Puzzle",
+                    "path": "/plugins/example-demo",
+                    "category": "Plugins",
+                    "order": 100
+                }
+            ],
+            "dashboard_cards": [
+                {
+                    "id": "example-plugin-card",
+                    "title": "Example Plugin",
+                    "icon": "Puzzle",
+                    "type": "info",
+                    "content": "This card is provided by the Example Plugin. Press Ctrl+Shift+P to see plugin info!",
+                    "order": 100
+                }
+            ],
+            "frontend_scripts": ["example-plugin.js"],
+            "download_url": "https://github.com/ValwareIRC/uwp-plugins/archive/refs/heads/main.zip",
+            "path_in_archive": "uwp-plugins-main/plugins/example-plugin"
+        },
+        {
+            "id": "emoji-trail",
+            "name": "Emoji Trail",
+            "version": "1.0.0",
+            "description": "Creates fun emoji firework explosions when you press the 'E' key. Features multiple emoji themes including party, nature, hearts, stars, and food!",
+            "author": "Valware",
+            "license": "MIT",
+            "homepage": "https://github.com/ValwareIRC/uwp-plugins",
+            "min_panel_version": "1.0.0",
+            "hooks": [],
+            "nav_items": [],
+            "dashboard_cards": [
+                {
+                    "id": "emoji-trail-card",
+                    "title": "Emoji Trail",
+                    "icon": "Sparkles",
+                    "type": "fun",
+                    "content": "Press 'E' to launch emoji fireworks! 🎉✨🎊",
+                    "order": 101
+                }
+            ],
+            "frontend_scripts": ["emoji-trail.js"],
+            "download_url": "https://github.com/ValwareIRC/uwp-plugins/archive/refs/heads/main.zip",
+            "path_in_archive": "uwp-plugins-main/plugins/emoji-trail"
+        }
+    ],
+    "categories": [
+        {
+            "id": "utilities",
+            "name": "Utilities",
+            "description": "Helpful utility plugins"
+        },
+        {
+            "id": "fun",
+            "name": "Fun",
+            "description": "Fun and entertaining plugins"
+        },
+        {
+            "id": "examples",
+            "name": "Examples",
+            "description": "Example plugins for developers"
+        }
+    ],
+    "version": "1.0.0",
+    "last_updated": "2025-01-14"
 }

@@ -9,21 +9,9 @@
   "repository": "https://github.com/ValwareIRC/uwp-plugins",
   "tags": ["fun", "emoji", "effects", "visual", "fireworks", "easter-egg"],
   "min_panel_version": "2.0.0",
-  "entry_point": "main.go",
-  "hooks": ["HookFooter"],
-  "provides": {
-    "frontend_scripts": [
-      {
-        "src": "emoji-trail.js",
-        "location": "body-end"
-      }
-    ],
-    "frontend_styles": [
-      {
-        "src": "emoji-trail.css"
-      }
-    ]
-  },
+  "hooks": [],
+  "frontend_scripts": ["emoji-trail.js"],
+  "frontend_styles": [],
   "config_schema": {
     "type": "object",
     "properties": {
