@@ -178,8 +178,18 @@ When answering questions, use your tools to get accurate, real-time information 
   // Network Context Fetching
   // ========================================
 
-  async function fetchNetworkContext() {
+  // Helper to get auth headers for API calls
+  function getAuthHeaders() {
     const headers = { 'Content-Type': 'application/json' };
+    const token = localStorage.getItem('token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+  }
+
+  async function fetchNetworkContext() {
+    const headers = getAuthHeaders();
 
     try {
       const [statsRes, usersRes, channelsRes] = await Promise.all([
@@ -207,7 +217,7 @@ When answering questions, use your tools to get accurate, real-time information 
   }
 
   async function fetchSpecificData(type, query = '') {
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = getAuthHeaders();
     let endpoint;
 
     switch (type) {
