@@ -369,47 +369,57 @@ When answering questions, use your tools to get accurate, real-time information 
     let contextData = '';
     try {
       const [users, channels, servers, stats] = await Promise.all([
-        fetchSpecificData('users').catch(() => null),
-        fetchSpecificData('channels').catch(() => null),
-        fetchSpecificData('servers').catch(() => null),
-        fetchNetworkContext().catch(() => null)
+        fetchSpecificData('users').catch((e) => { console.error('[Runa] users fetch error:', e); return null; }),
+        fetchSpecificData('channels').catch((e) => { console.error('[Runa] channels fetch error:', e); return null; }),
+        fetchSpecificData('servers').catch((e) => { console.error('[Runa] servers fetch error:', e); return null; }),
+        fetchNetworkContext().catch((e) => { console.error('[Runa] stats fetch error:', e); return null; })
       ]);
+      
+      console.log('[Runa] Fetched data:', { users, channels, servers, stats });
       
       const contextParts = [];
       
-      if (users && users.users) {
-        contextParts.push(`**Connected Users (${users.users.length}):**`);
-        users.users.slice(0, 50).forEach(u => {
-          contextParts.push(`- ${u.name} (${u.hostname || 'unknown host'}) - ${u.details?.realname || ''}`);
+      // Users are returned as an array directly, not {users: [...]}
+      const userList = Array.isArray(users) ? users : (users?.users || []);
+      if (userList.length > 0) {
+        contextParts.push(`**Connected Users (${userList.length}):**`);
+        userList.slice(0, 50).forEach(u => {
+          contextParts.push(`- ${u.name} (${u.hostname || 'unknown host'}) - ${u.realname || ''}`);
         });
-        if (users.users.length > 50) {
-          contextParts.push(`... and ${users.users.length - 50} more users`);
+        if (userList.length > 50) {
+          contextParts.push(`... and ${userList.length - 50} more users`);
         }
       }
       
-      if (channels && channels.channels) {
-        contextParts.push(`\n**Active Channels (${channels.channels.length}):**`);
-        channels.channels.forEach(c => {
-          contextParts.push(`- ${c.name} (${c.num_users || 0} users) - ${c.topic || 'No topic'}`);
+      // Channels are returned as an array directly
+      const channelList = Array.isArray(channels) ? channels : (channels?.channels || []);
+      if (channelList.length > 0) {
+        contextParts.push(`\n**Active Channels (${channelList.length}):**`);
+        channelList.forEach(c => {
+          contextParts.push(`- ${c.name} (${c.num_users || c.members?.length || 0} users) - ${c.topic || 'No topic'}`);
         });
       }
       
-      if (servers && servers.servers) {
-        contextParts.push(`\n**Linked Servers (${servers.servers.length}):**`);
-        servers.servers.forEach(s => {
+      // Servers are returned as an array directly
+      const serverList = Array.isArray(servers) ? servers : (servers?.servers || []);
+      if (serverList.length > 0) {
+        contextParts.push(`\n**Linked Servers (${serverList.length}):**`);
+        serverList.forEach(s => {
           contextParts.push(`- ${s.name}: ${s.info || ''}`);
         });
       }
       
       if (stats) {
         contextParts.push(`\n**Network Statistics:**`);
-        contextParts.push(`- Total Users: ${stats.totalUsers || 'unknown'}`);
-        contextParts.push(`- Total Channels: ${stats.totalChannels || 'unknown'}`);
-        contextParts.push(`- Total Servers: ${stats.totalServers || 'unknown'}`);
+        contextParts.push(`- Total Users: ${stats.userCount || stats.totalUsers || 'unknown'}`);
+        contextParts.push(`- Total Channels: ${stats.channelCount || stats.totalChannels || 'unknown'}`);
+        contextParts.push(`- Total Servers: ${serverList.length || 'unknown'}`);
       }
       
       if (contextParts.length > 0) {
         contextData = '\n\n---\n## LIVE NETWORK DATA (fetched just now):\n' + contextParts.join('\n');
+      } else {
+        console.warn('[Runa] No context data was collected');
       }
     } catch (err) {
       console.warn('[Runa] Failed to fetch network context:', err);
