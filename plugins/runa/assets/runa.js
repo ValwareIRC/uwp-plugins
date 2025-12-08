@@ -1113,27 +1113,95 @@ When answering questions, use your tools to get accurate, real-time information 
   }
 
   function formatMarkdown(text) {
-    let html = escapeHtml(text);
+    if (!text) return '';
     
-    // Code blocks
-    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    let html = text;
     
-    // Bold/Italic
+    // Escape HTML first but preserve our markdown
+    html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    
+    // Code blocks (fenced) - must be done before other processing
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+      return `<pre class="runa-code-block"><code class="language-${lang || 'text'}">${code.trim()}</code></pre>`;
+    });
+    
+    // Inline code
+    html = html.replace(/`([^`]+)`/g, '<code class="runa-inline-code">$1</code>');
+    
+    // Headers (must be at start of line)
+    html = html.replace(/^#### (.+)$/gm, '<h5 class="runa-h5">$1</h5>');
+    html = html.replace(/^### (.+)$/gm, '<h4 class="runa-h4">$1</h4>');
+    html = html.replace(/^## (.+)$/gm, '<h3 class="runa-h3">$1</h3>');
+    html = html.replace(/^# (.+)$/gm, '<h2 class="runa-h2">$1</h2>');
+    
+    // Bold and italic (order matters)
+    html = html.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
     html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    html = html.replace(/___([^_]+)___/g, '<strong><em>$1</em></strong>');
+    html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+    html = html.replace(/_([^_]+)_/g, '<em>$1</em>');
     
-    // Headers
-    html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
-    html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
-    html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+    // Strikethrough
+    html = html.replace(/~~([^~]+)~~/g, '<del>$1</del>');
     
-    // Lists
-    html = html.replace(/^[\*\-] (.+)$/gm, '<li>$1</li>');
-    html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+    // Links [text](url)
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
     
-    // Line breaks
+    // Images ![alt](url)
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="runa-image">');
+    
+    // Blockquotes
+    html = html.replace(/^&gt; (.+)$/gm, '<blockquote class="runa-blockquote">$1</blockquote>');
+    // Merge consecutive blockquotes
+    html = html.replace(/<\/blockquote>\n<blockquote class="runa-blockquote">/g, '\n');
+    
+    // Horizontal rule
+    html = html.replace(/^---$/gm, '<hr class="runa-hr">');
+    html = html.replace(/^\*\*\*$/gm, '<hr class="runa-hr">');
+    
+    // Tables
+    html = html.replace(/^\|(.+)\|\n\|[-| :]+\|\n((?:\|.+\|\n?)+)/gm, (match, header, body) => {
+      const headers = header.split('|').map(h => h.trim()).filter(h => h);
+      const rows = body.trim().split('\n').map(row => 
+        row.split('|').map(cell => cell.trim()).filter(cell => cell)
+      );
+      
+      let table = '<table class="runa-table"><thead><tr>';
+      headers.forEach(h => table += `<th>${h}</th>`);
+      table += '</tr></thead><tbody>';
+      rows.forEach(row => {
+        table += '<tr>';
+        row.forEach(cell => table += `<td>${cell}</td>`);
+        table += '</tr>';
+      });
+      table += '</tbody></table>';
+      return table;
+    });
+    
+    // Numbered lists
+    html = html.replace(/^(\d+)\. (.+)$/gm, '<li class="runa-oli" value="$1">$2</li>');
+    html = html.replace(/((?:<li class="runa-oli"[^>]*>.*<\/li>\n?)+)/g, '<ol class="runa-ol">$1</ol>');
+    
+    // Unordered lists  
+    html = html.replace(/^[\*\-] (.+)$/gm, '<li class="runa-uli">$1</li>');
+    html = html.replace(/((?:<li class="runa-uli">.*<\/li>\n?)+)/g, '<ul class="runa-ul">$1</ul>');
+    
+    // Paragraphs - wrap text blocks separated by double newlines
+    html = html.replace(/\n\n+/g, '</p><p class="runa-p">');
+    
+    // Single line breaks within paragraphs
     html = html.replace(/\n/g, '<br>');
+    
+    // Clean up empty paragraphs and extra breaks
+    html = html.replace(/<p class="runa-p"><\/p>/g, '');
+    html = html.replace(/<br><(h[2-5]|ul|ol|pre|blockquote|table|hr)/g, '<$1');
+    html = html.replace(/<\/(h[2-5]|ul|ol|pre|blockquote|table)><br>/g, '</$1>');
+    
+    // Wrap in paragraph if not already wrapped
+    if (!html.startsWith('<')) {
+      html = `<p class="runa-p">${html}</p>`;
+    }
     
     return html;
   }

@@ -307,37 +307,164 @@
   background: var(--bg-tertiary);
   padding: 2px 6px;
   border-radius: 4px;
-  font-family: 'Monaco', 'Menlo', monospace;
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
   font-size: 13px;
 }
 
-.runa-message-content pre {
+.runa-message-content pre,
+.runa-message-content .runa-code-block {
   background: var(--bg-tertiary);
   padding: 16px;
   border-radius: 8px;
   overflow-x: auto;
   margin: 12px 0;
+  border: 1px solid var(--border-color);
 }
 
-.runa-message-content pre code {
+.runa-message-content pre code,
+.runa-message-content .runa-code-block code {
   background: none;
   padding: 0;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
-.runa-message-content ul {
+.runa-message-content .runa-inline-code {
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.runa-message-content ul,
+.runa-message-content .runa-ul {
   margin: 8px 0;
   padding-left: 24px;
+  list-style-type: disc;
+}
+
+.runa-message-content ol,
+.runa-message-content .runa-ol {
+  margin: 8px 0;
+  padding-left: 24px;
+  list-style-type: decimal;
 }
 
 .runa-message-content li {
   margin: 4px 0;
+  line-height: 1.5;
 }
 
 .runa-message-content h2,
-.runa-message-content h3,
-.runa-message-content h4 {
-  margin: 16px 0 8px 0;
+.runa-message-content .runa-h2 {
+  font-size: 1.5em;
+  margin: 20px 0 12px 0;
   color: var(--text-primary);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+}
+
+.runa-message-content h3,
+.runa-message-content .runa-h3 {
+  font-size: 1.25em;
+  margin: 16px 0 10px 0;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.runa-message-content h4,
+.runa-message-content .runa-h4 {
+  font-size: 1.1em;
+  margin: 14px 0 8px 0;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.runa-message-content h5,
+.runa-message-content .runa-h5 {
+  font-size: 1em;
+  margin: 12px 0 6px 0;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.runa-message-content .runa-p {
+  margin: 8px 0;
+  line-height: 1.6;
+}
+
+.runa-message-content .runa-blockquote {
+  border-left: 4px solid var(--primary-color);
+  margin: 12px 0;
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border-radius: 0 8px 8px 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.runa-message-content .runa-hr {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 16px 0;
+}
+
+.runa-message-content .runa-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.runa-message-content .runa-table th,
+.runa-message-content .runa-table td {
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.runa-message-content .runa-table th {
+  background: var(--bg-secondary);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.runa-message-content .runa-table tr:nth-child(even) {
+  background: var(--bg-secondary);
+}
+
+.runa-message-content .runa-table tr:hover {
+  background: var(--bg-hover);
+}
+
+.runa-message-content a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.runa-message-content a:hover {
+  text-decoration: underline;
+}
+
+.runa-message-content .runa-image {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 8px 0;
+}
+
+.runa-message-content del {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.runa-message-content strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.runa-message-content em {
+  font-style: italic;
 }
 
 /* Typing Indicator */
