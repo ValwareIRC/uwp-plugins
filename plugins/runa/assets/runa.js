@@ -423,11 +423,6 @@ When answering questions, use your tools to get accurate, real-time information 
     // This ensures Runa has real data even if the API doesn't support function calling
     let contextData = '';
     try {
-      // Show pre-fetch indicator
-      showToolIndicator('get_users', {});
-      showToolIndicator('get_channels', {});
-      showToolIndicator('get_servers', {});
-      
       const [users, channels, servers, stats] = await Promise.all([
         fetchSpecificData('users').catch((e) => { console.error('[Runa] users fetch error:', e); return null; }),
         fetchSpecificData('channels').catch((e) => { console.error('[Runa] channels fetch error:', e); return null; }),
