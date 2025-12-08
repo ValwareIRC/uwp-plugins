@@ -341,6 +341,9 @@ When answering questions, use your tools to get accurate, real-time information 
   async function executeTool(name, args) {
     console.log(`[Runa] Executing tool: ${name}`, args);
     
+    // Show tool usage indicator
+    showToolIndicator(name, args);
+    
     switch (name) {
       case 'get_users':
         return await fetchSpecificData('users');
@@ -362,12 +365,69 @@ When answering questions, use your tools to get accurate, real-time information 
         return { error: `Unknown tool: ${name}` };
     }
   }
+  
+  // Human-readable tool names
+  const TOOL_LABELS = {
+    'get_users': { label: 'Getting online users', icon: '👥' },
+    'get_user_details': { label: 'Looking up user', icon: '👤' },
+    'get_channels': { label: 'Fetching channels', icon: '💬' },
+    'get_channel_details': { label: 'Looking up channel', icon: '#️⃣' },
+    'get_server_bans': { label: 'Checking server bans', icon: '🚫' },
+    'get_spamfilters': { label: 'Loading spamfilters', icon: '🛡️' },
+    'get_servers': { label: 'Getting linked servers', icon: '🖥️' },
+    'get_network_stats': { label: 'Fetching network stats', icon: '📊' }
+  };
+  
+  function showToolIndicator(toolName, args) {
+    const typingIndicator = document.getElementById('runa-typing');
+    if (!typingIndicator) return;
+    
+    const toolInfo = TOOL_LABELS[toolName] || { label: 'Working...', icon: '⚙️' };
+    let label = toolInfo.label;
+    
+    // Add context for specific lookups
+    if (toolName === 'get_user_details' && args?.nickname) {
+      label = `Looking up ${args.nickname}`;
+    } else if (toolName === 'get_channel_details' && args?.channel) {
+      label = `Looking up ${args.channel}`;
+    }
+    
+    // Find or create the tool indicator container
+    let toolContainer = typingIndicator.querySelector('.runa-tool-indicators');
+    if (!toolContainer) {
+      toolContainer = document.createElement('div');
+      toolContainer.className = 'runa-tool-indicators';
+      const messageBody = typingIndicator.querySelector('.runa-message-body');
+      if (messageBody) {
+        // Insert before the typing dots
+        const typingDots = messageBody.querySelector('.runa-typing-indicator');
+        if (typingDots) {
+          messageBody.insertBefore(toolContainer, typingDots);
+        } else {
+          messageBody.appendChild(toolContainer);
+        }
+      }
+    }
+    
+    // Add the tool badge
+    const badge = document.createElement('div');
+    badge.className = 'runa-tool-badge';
+    badge.innerHTML = `<span class="runa-tool-icon">${toolInfo.icon}</span><span class="runa-tool-label">${escapeHtml(label)}</span>`;
+    toolContainer.appendChild(badge);
+    
+    scrollToBottom();
+  }
 
   async function sendToAI(message) {
     // Always fetch fresh network context to include in the prompt
     // This ensures Runa has real data even if the API doesn't support function calling
     let contextData = '';
     try {
+      // Show pre-fetch indicator
+      showToolIndicator('get_users', {});
+      showToolIndicator('get_channels', {});
+      showToolIndicator('get_servers', {});
+      
       const [users, channels, servers, stats] = await Promise.all([
         fetchSpecificData('users').catch((e) => { console.error('[Runa] users fetch error:', e); return null; }),
         fetchSpecificData('channels').catch((e) => { console.error('[Runa] channels fetch error:', e); return null; }),

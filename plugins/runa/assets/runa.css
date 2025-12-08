@@ -368,6 +368,46 @@
   30% { transform: translateY(-8px); }
 }
 
+/* Tool Usage Indicators */
+.runa-tool-indicators {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.runa-tool-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  animation: runa-badge-appear 0.3s ease-out;
+}
+
+.runa-tool-badge .runa-tool-icon {
+  font-size: 13px;
+}
+
+.runa-tool-badge .runa-tool-label {
+  font-weight: 500;
+}
+
+@keyframes runa-badge-appear {
+  0% { 
+    opacity: 0; 
+    transform: scale(0.8) translateY(4px);
+  }
+  100% { 
+    opacity: 1; 
+    transform: scale(1) translateY(0);
+  }
+}
+
 /* System Messages */
 .runa-system-message {
   text-align: center;
