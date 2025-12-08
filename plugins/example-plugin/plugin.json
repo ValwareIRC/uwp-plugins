@@ -1,0 +1,65 @@
+{
+  "id": "example-plugin",
+  "name": "Example Plugin",
+  "version": "1.0.0",
+  "author": "ValwareIRC",
+  "description": "A demonstration plugin showing how to extend the UnrealIRCd Web Panel with custom navigation items, dashboard cards, API endpoints, and hook callbacks.",
+  "category": "utilities",
+  "license": "MIT",
+  "repository": "https://github.com/ValwareIRC/uwp-plugins",
+  "tags": ["example", "demo", "tutorial", "hooks", "starter"],
+  "min_panel_version": "2.0.0",
+  "entry_point": "main.go",
+  "hooks": ["HookNavbar", "HookOverviewCard", "HookFooter", "HookUserLookup"],
+  "provides": {
+    "nav_items": [
+      {
+        "label": "Example Page",
+        "icon": "puzzle",
+        "path": "/plugin/example",
+        "order": 100
+      }
+    ],
+    "dashboard_cards": [
+      {
+        "title": "Example Plugin Demo",
+        "icon": "puzzle",
+        "size": "md",
+        "order": 50
+      }
+    ],
+    "api_routes": [
+      {
+        "method": "GET",
+        "path": "/plugin/example/data",
+        "description": "Get example plugin data"
+      },
+      {
+        "method": "POST",
+        "path": "/plugin/example/action",
+        "description": "Trigger an example action"
+      }
+    ]
+  },
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "welcome_message": {
+        "type": "string",
+        "description": "Custom welcome message displayed on the dashboard card",
+        "default": "Hello from the Example Plugin!"
+      },
+      "show_user_count": {
+        "type": "boolean",
+        "description": "Show live user count on the example page",
+        "default": true
+      },
+      "card_color": {
+        "type": "string",
+        "description": "Accent color for the dashboard card",
+        "enum": ["blue", "green", "purple", "orange"],
+        "default": "purple"
+      }
+    }
+  }
+}

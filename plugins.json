@@ -1,71 +1,32 @@
 {
-  "version": 1,
-  "generated_at": "2025-12-08T00:30:25.379Z",
-  "plugin_count": 2,
-  "categories": [
-    "security",
-    "integration",
-    "monitoring",
-    "management",
-    "utilities",
-    "appearance"
-  ],
+  "version": 2,
+  "generated_at": "2025-12-08T01:30:00Z",
   "plugins": [
     {
-      "id": "connection-stats",
-      "name": "Connection Statistics",
+      "id": "example-plugin",
+      "name": "Example Plugin",
       "version": "1.0.0",
       "author": "ValwareIRC",
-      "description": "Advanced connection statistics and analytics with historical tracking and trend analysis.",
-      "category": "monitoring",
+      "description": "A demonstration plugin showing how to extend the UnrealIRCd Web Panel with custom navigation items, dashboard cards, API endpoints, and hook callbacks.",
+      "category": "utilities",
       "license": "MIT",
-      "tags": [
-        "statistics",
-        "analytics",
-        "monitoring",
-        "graphs",
-        "history"
-      ],
       "repository": "https://github.com/ValwareIRC/uwp-plugins",
+      "tags": ["example", "demo", "tutorial", "hooks", "starter"],
       "min_panel_version": "2.0.0",
-      "hooks": [
-        "on_user_connect",
-        "on_user_disconnect",
-        "on_panel_startup"
-      ],
-      "has_readme": true,
-      "has_icon": false,
-      "last_updated": "2025-12-08T00:21:48.199Z",
-      "downloads": 0,
-      "rating": 0,
-      "rating_count": 0
+      "provides": ["nav-items", "dashboard-cards", "api-routes", "hooks-demo"]
     },
     {
-      "id": "geoip-display",
-      "name": "GeoIP Display",
+      "id": "emoji-trail",
+      "name": "Emoji Trail",
       "version": "1.0.0",
       "author": "ValwareIRC",
-      "description": "Displays geographic location information for connected users including country and city data.",
-      "category": "monitoring",
+      "description": "Adds delightful emoji fireworks that burst from your cursor when you press the 'E' key. A fun visual enhancement for your admin panel!",
+      "category": "fun",
       "license": "MIT",
-      "tags": [
-        "geoip",
-        "location",
-        "geography",
-        "users"
-      ],
       "repository": "https://github.com/ValwareIRC/uwp-plugins",
+      "tags": ["fun", "emoji", "effects", "visual", "fireworks", "easter-egg"],
       "min_panel_version": "2.0.0",
-      "hooks": [
-        "on_user_connect",
-        "on_api_request"
-      ],
-      "has_readme": true,
-      "has_icon": false,
-      "last_updated": "2025-12-08T00:20:55.331Z",
-      "downloads": 0,
-      "rating": 0,
-      "rating_count": 0
+      "provides": ["visual-effects", "keyboard-shortcuts"]
     }
   ]
 }

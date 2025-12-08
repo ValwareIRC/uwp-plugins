@@ -1,0 +1,62 @@
+{
+  "id": "emoji-trail",
+  "name": "Emoji Trail",
+  "version": "1.0.0",
+  "author": "ValwareIRC",
+  "description": "Adds delightful emoji fireworks that burst from your cursor when you press the 'E' key. A fun visual enhancement for your admin panel!",
+  "category": "fun",
+  "license": "MIT",
+  "repository": "https://github.com/ValwareIRC/uwp-plugins",
+  "tags": ["fun", "emoji", "effects", "visual", "fireworks", "easter-egg"],
+  "min_panel_version": "2.0.0",
+  "entry_point": "main.go",
+  "hooks": ["HookFooter"],
+  "provides": {
+    "frontend_scripts": [
+      {
+        "src": "emoji-trail.js",
+        "location": "body-end"
+      }
+    ],
+    "frontend_styles": [
+      {
+        "src": "emoji-trail.css"
+      }
+    ]
+  },
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "description": "Enable or disable emoji trails",
+        "default": true
+      },
+      "trigger_key": {
+        "type": "string",
+        "description": "Key that triggers the emoji burst",
+        "default": "e"
+      },
+      "emoji_set": {
+        "type": "string",
+        "description": "Which emoji set to use",
+        "enum": ["party", "nature", "hearts", "stars", "food", "random"],
+        "default": "party"
+      },
+      "particle_count": {
+        "type": "integer",
+        "description": "Number of emoji particles per burst",
+        "default": 12,
+        "minimum": 5,
+        "maximum": 30
+      },
+      "burst_size": {
+        "type": "integer",
+        "description": "Size of the burst radius in pixels",
+        "default": 150,
+        "minimum": 50,
+        "maximum": 300
+      }
+    }
+  }
+}
