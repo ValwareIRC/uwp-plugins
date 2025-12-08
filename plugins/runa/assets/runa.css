@@ -9,6 +9,7 @@
 
 .runa-app {
   display: flex;
+  flex-direction: column;
   height: calc(100vh - 140px);
   min-height: 500px;
   background: var(--bg-primary);
@@ -17,28 +18,24 @@
   border: 1px solid var(--border-color);
 }
 
-/* ========================================
-   Sidebar
-======================================== */
-
-.runa-sidebar {
-  width: 260px;
-  background: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
-  display: flex;
+.runa-app-full {
   flex-direction: column;
-  flex-shrink: 0;
 }
 
-.runa-sidebar-header {
+/* ========================================
+   Header
+======================================== */
+
+.runa-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
 }
 
-.runa-logo {
+.runa-header-title {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -52,6 +49,12 @@
   font-size: 18px;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.runa-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .runa-icon-btn {
@@ -73,94 +76,6 @@
   color: var(--text-primary);
 }
 
-.runa-sidebar-nav {
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.runa-nav-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: left;
-  width: 100%;
-}
-
-.runa-nav-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.runa-nav-btn.active {
-  background: var(--accent);
-  color: white;
-}
-
-.runa-sidebar-status {
-  margin-top: auto;
-  padding: 12px;
-  border-top: 1px solid var(--border-color);
-}
-
-.runa-context-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-}
-
-.runa-status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--text-muted);
-}
-
-.runa-status-dot.active {
-  background: #22c55e;
-}
-
-.runa-refresh-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.runa-refresh-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.runa-refresh-btn.loading svg {
-  animation: runa-spin 1s linear infinite;
-}
-
-@keyframes runa-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
 /* ========================================
    Main Content Area
 ======================================== */
@@ -170,6 +85,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   background: var(--bg-primary);
 }
 
@@ -632,6 +548,20 @@
   max-width: 600px;
   margin: 0 auto;
   padding: 32px;
+}
+
+.runa-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+
+.runa-settings-header h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
 }
 
 .runa-settings-content h2 {

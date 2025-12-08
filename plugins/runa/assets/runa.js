@@ -799,42 +799,23 @@ When answering questions, use your tools to get accurate, real-time information 
     }
 
     container.innerHTML = `
-      <div class="runa-app">
-        <div class="runa-sidebar">
-          <div class="runa-sidebar-header">
-            <div class="runa-logo">
+      <div class="runa-app runa-app-full">
+        <div class="runa-main">
+          <div class="runa-header">
+            <div class="runa-header-title">
               <span class="runa-logo-icon">🤖</span>
               <span class="runa-logo-text">Runa</span>
             </div>
-            <button class="runa-icon-btn" id="runa-new-chat" title="New conversation">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-            </button>
-          </div>
-          
-          <div class="runa-sidebar-nav">
-            <button class="runa-nav-btn active" data-view="chat">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              Chat
-            </button>
-            <button class="runa-nav-btn" data-view="settings">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/></svg>
-              Settings
-            </button>
-          </div>
-          
-          <div class="runa-sidebar-status">
-            <div class="runa-context-status" id="runa-context-status">
-              <div class="runa-status-dot"></div>
-              <span>No data loaded</span>
+            <div class="runa-header-actions">
+              <button class="runa-icon-btn" id="runa-new-chat" title="New conversation">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+              <button class="runa-icon-btn" id="runa-settings-btn" title="Settings">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/></svg>
+              </button>
             </div>
-            <button class="runa-refresh-btn" id="runa-refresh-context">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-              Refresh
-            </button>
           </div>
-        </div>
-        
-        <div class="runa-main">
+          
           <div class="runa-view runa-chat-view active" id="runa-chat-view">
             <div class="runa-messages" id="runa-messages">
               <div class="runa-welcome">
@@ -863,7 +844,12 @@ When answering questions, use your tools to get accurate, real-time information 
           
           <div class="runa-view runa-settings-view" id="runa-settings-view">
             <div class="runa-settings-content">
-              <h2>⚙️ Settings</h2>
+              <div class="runa-settings-header">
+                <h2>⚙️ Settings</h2>
+                <button class="runa-icon-btn" id="runa-settings-close" title="Back to chat">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
               
               <div class="runa-settings-section">
                 <h3>AI Provider</h3>
@@ -942,12 +928,9 @@ When answering questions, use your tools to get accurate, real-time information 
   }
 
   function bindEvents() {
-    document.querySelectorAll('.runa-nav-btn').forEach(btn => {
-      btn.addEventListener('click', () => switchView(btn.dataset.view));
-    });
-
     document.getElementById('runa-new-chat').addEventListener('click', clearConversation);
-    document.getElementById('runa-refresh-context').addEventListener('click', refreshContext);
+    document.getElementById('runa-settings-btn').addEventListener('click', () => switchView('settings'));
+    document.getElementById('runa-settings-close').addEventListener('click', () => switchView('chat'));
 
     const input = document.getElementById('runa-input');
     const sendBtn = document.getElementById('runa-send');
@@ -992,9 +975,6 @@ When answering questions, use your tools to get accurate, real-time information 
 
   function switchView(view) {
     currentView = view;
-    document.querySelectorAll('.runa-nav-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.view === view);
-    });
     document.querySelectorAll('.runa-view').forEach(v => {
       v.classList.toggle('active', v.id === `runa-${view}-view`);
     });
