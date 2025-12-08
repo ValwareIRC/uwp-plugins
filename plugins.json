@@ -1,82 +1,143 @@
 {
-    "plugins": [
+  "version": 2,
+  "generated_at": "2025-12-08T02:09:21.182Z",
+  "plugin_count": 2,
+  "categories": [
+    {
+      "id": "security",
+      "name": "Security",
+      "description": "Security-related features and tools"
+    },
+    {
+      "id": "integration",
+      "name": "Integrations",
+      "description": "Third-party service integrations"
+    },
+    {
+      "id": "monitoring",
+      "name": "Monitoring",
+      "description": "Monitoring and alerting tools"
+    },
+    {
+      "id": "management",
+      "name": "Management",
+      "description": "Server and user management"
+    },
+    {
+      "id": "utilities",
+      "name": "Utilities",
+      "description": "General utility plugins"
+    },
+    {
+      "id": "appearance",
+      "name": "Appearance",
+      "description": "Visual customizations and themes"
+    },
+    {
+      "id": "fun",
+      "name": "Fun",
+      "description": "Fun and entertainment features"
+    }
+  ],
+  "plugins": [
+    {
+      "id": "emoji-trail",
+      "name": "Emoji Trail",
+      "version": "1.0.0",
+      "author": "ValwareIRC",
+      "description": "Adds delightful emoji fireworks that burst from your cursor when you press the 'E' key. A fun visual enhancement for your admin panel!",
+      "category": "fun",
+      "license": "MIT",
+      "tags": [
+        "fun",
+        "emoji",
+        "effects",
+        "visual",
+        "fireworks",
+        "easter-egg"
+      ],
+      "repository": "https://github.com/ValwareIRC/uwp-plugins",
+      "homepage": null,
+      "min_panel_version": "2.0.0",
+      "hooks": [],
+      "nav_items": [],
+      "dashboard_cards": [],
+      "frontend_scripts": [
+        "emoji-trail.js"
+      ],
+      "settings_schema": null,
+      "has_readme": true,
+      "has_icon": false,
+      "last_updated": "2025-12-08T02:02:56.596Z",
+      "downloads": 0,
+      "rating": 0,
+      "rating_count": 0
+    },
+    {
+      "id": "example-plugin",
+      "name": "Example Plugin",
+      "version": "1.0.0",
+      "author": "Valware",
+      "description": "A comprehensive example plugin demonstrating all features of the UWP plugin system including hooks, navigation items, dashboard cards, and frontend JavaScript.",
+      "category": "utilities",
+      "license": "MIT",
+      "tags": [
+        "example",
+        "demo",
+        "tutorial"
+      ],
+      "repository": "https://github.com/ValwareIRC/uwp-plugins",
+      "homepage": "https://github.com/ValwareIRC/uwp-plugins",
+      "min_panel_version": "1.0.0",
+      "hooks": [
+        "OnStartup",
+        "OnShutdown",
+        "OnUserListRequest",
+        "OnChannelListRequest"
+      ],
+      "nav_items": [
         {
-            "id": "example-plugin",
-            "name": "Example Plugin",
-            "version": "1.0.0",
-            "description": "A comprehensive example plugin demonstrating all features of the UWP plugin system including hooks, navigation items, dashboard cards, and frontend JavaScript.",
-            "author": "Valware",
-            "license": "MIT",
-            "homepage": "https://github.com/ValwareIRC/uwp-plugins",
-            "min_panel_version": "1.0.0",
-            "hooks": ["OnStartup", "OnShutdown", "OnUserListRequest", "OnChannelListRequest"],
-            "nav_items": [
-                {
-                    "id": "example-plugin-demo",
-                    "label": "Plugin Demo",
-                    "icon": "Puzzle",
-                    "path": "/plugins/example-demo",
-                    "category": "Plugins",
-                    "order": 100
-                }
-            ],
-            "dashboard_cards": [
-                {
-                    "id": "example-plugin-card",
-                    "title": "Example Plugin",
-                    "icon": "Puzzle",
-                    "type": "info",
-                    "content": "This card is provided by the Example Plugin. Press Ctrl+Shift+P to see plugin info!",
-                    "order": 100
-                }
-            ],
-            "frontend_scripts": ["example-plugin.js"],
-            "download_url": "https://github.com/ValwareIRC/uwp-plugins/archive/refs/heads/main.zip",
-            "path_in_archive": "uwp-plugins-main/plugins/example-plugin"
-        },
-        {
-            "id": "emoji-trail",
-            "name": "Emoji Trail",
-            "version": "1.0.0",
-            "description": "Creates fun emoji firework explosions when you press the 'E' key. Features multiple emoji themes including party, nature, hearts, stars, and food!",
-            "author": "Valware",
-            "license": "MIT",
-            "homepage": "https://github.com/ValwareIRC/uwp-plugins",
-            "min_panel_version": "1.0.0",
-            "hooks": [],
-            "nav_items": [],
-            "dashboard_cards": [
-                {
-                    "id": "emoji-trail-card",
-                    "title": "Emoji Trail",
-                    "icon": "Sparkles",
-                    "type": "fun",
-                    "content": "Press 'E' to launch emoji fireworks! 🎉✨🎊",
-                    "order": 101
-                }
-            ],
-            "frontend_scripts": ["emoji-trail.js"],
-            "download_url": "https://github.com/ValwareIRC/uwp-plugins/archive/refs/heads/main.zip",
-            "path_in_archive": "uwp-plugins-main/plugins/emoji-trail"
+          "id": "example-plugin-demo",
+          "label": "Plugin Demo",
+          "icon": "Puzzle",
+          "path": "/plugins/example-demo",
+          "category": "Plugins",
+          "order": 100
         }
-    ],
-    "categories": [
+      ],
+      "dashboard_cards": [
         {
-            "id": "utilities",
-            "name": "Utilities",
-            "description": "Helpful utility plugins"
-        },
-        {
-            "id": "fun",
-            "name": "Fun",
-            "description": "Fun and entertaining plugins"
-        },
-        {
-            "id": "examples",
-            "name": "Examples",
-            "description": "Example plugins for developers"
+          "id": "example-plugin-card",
+          "title": "Example Plugin",
+          "icon": "Puzzle",
+          "type": "info",
+          "content": "This card is provided by the Example Plugin. Press Ctrl+Shift+P to see plugin info!",
+          "order": 100
         }
-    ],
-    "version": "1.0.0",
-    "last_updated": "2025-01-14"
+      ],
+      "frontend_scripts": [
+        "example-plugin.js"
+      ],
+      "settings_schema": {
+        "show_badge": {
+          "type": "boolean",
+          "label": "Show Active Badge",
+          "description": "Display a badge indicating the plugin is active",
+          "default": true
+        },
+        "keyboard_shortcut": {
+          "type": "string",
+          "label": "Info Shortcut Key",
+          "description": "Key to press with Ctrl+Shift to show plugin info",
+          "default": "p"
+        }
+      },
+      "has_readme": true,
+      "has_icon": false,
+      "last_updated": "2025-12-08T02:09:07.765Z",
+      "downloads": 0,
+      "rating": 0,
+      "rating_count": 0
+    }
+  ]
 }

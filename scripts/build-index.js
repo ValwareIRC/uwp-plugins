@@ -17,7 +17,8 @@ const VALID_CATEGORIES = [
   'monitoring',
   'management',
   'utilities',
-  'appearance'
+  'appearance',
+  'fun'
 ];
 
 function readPluginManifest(pluginDir) {
@@ -40,8 +41,8 @@ function readPluginManifest(pluginDir) {
 function validateManifest(manifest, pluginId) {
   const errors = [];
   
-  // Required fields
-  const required = ['id', 'name', 'version', 'author', 'description', 'category', 'license', 'entry_point'];
+  // Required fields - only the essentials
+  const required = ['id', 'name', 'version', 'author', 'description'];
   for (const field of required) {
     if (!manifest[field]) {
       errors.push(`Missing required field: ${field}`);
@@ -53,7 +54,7 @@ function validateManifest(manifest, pluginId) {
     errors.push(`Plugin ID '${manifest.id}' doesn't match directory name '${pluginId}'`);
   }
   
-  // Valid category
+  // Valid category (if provided)
   if (manifest.category && !VALID_CATEGORIES.includes(manifest.category)) {
     errors.push(`Invalid category '${manifest.category}'. Must be one of: ${VALID_CATEGORIES.join(', ')}`);
   }
@@ -132,12 +133,17 @@ function buildIndex() {
       version: manifest.version,
       author: manifest.author,
       description: manifest.description,
-      category: manifest.category,
-      license: manifest.license,
+      category: manifest.category || 'utilities',
+      license: manifest.license || 'MIT',
       tags: manifest.tags || [],
-      repository: manifest.repository || null,
+      repository: manifest.repository || manifest.homepage || null,
+      homepage: manifest.homepage || null,
       min_panel_version: manifest.min_panel_version || "2.0.0",
       hooks: manifest.hooks || [],
+      nav_items: manifest.nav_items || [],
+      dashboard_cards: manifest.dashboard_cards || [],
+      frontend_scripts: manifest.frontend_scripts || [],
+      settings_schema: manifest.settings_schema || null,
       has_readme: hasReadme(pluginDir),
       has_icon: hasIcon(pluginDir),
       last_updated: stats.last_updated,
@@ -154,12 +160,38 @@ function buildIndex() {
   // Sort by name
   plugins.sort((a, b) => a.name.localeCompare(b.name));
   
-  // Build final index
+  // Build final index with category metadata
+  const categories = VALID_CATEGORIES.map(id => {
+    const names = {
+      'security': 'Security',
+      'integration': 'Integrations',
+      'monitoring': 'Monitoring',
+      'management': 'Management',
+      'utilities': 'Utilities',
+      'appearance': 'Appearance',
+      'fun': 'Fun'
+    };
+    const descriptions = {
+      'security': 'Security-related features and tools',
+      'integration': 'Third-party service integrations',
+      'monitoring': 'Monitoring and alerting tools',
+      'management': 'Server and user management',
+      'utilities': 'General utility plugins',
+      'appearance': 'Visual customizations and themes',
+      'fun': 'Fun and entertainment features'
+    };
+    return {
+      id,
+      name: names[id] || id,
+      description: descriptions[id] || ''
+    };
+  });
+  
   const index = {
-    version: 1,
+    version: 2,
     generated_at: new Date().toISOString(),
     plugin_count: plugins.length,
-    categories: VALID_CATEGORIES,
+    categories: categories,
     plugins: plugins
   };
   

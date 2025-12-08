@@ -545,33 +545,23 @@ cd plugins/your-plugin-id
 # Create plugin.json and other files
 ```
 
-### 3. Update plugins.json Index
+### 3. Test Locally
 
-Add your plugin to the root `plugins.json` file:
+Run the build script to validate your plugin:
 
-```json
-{
-  "plugins": [
-    {
-      "id": "your-plugin-id",
-      "name": "Your Plugin",
-      "version": "1.0.0",
-      "author": "Your Name",
-      "description": "Description of your plugin",
-      "category": "utilities",
-      "tags": ["tag1", "tag2"],
-      "downloads": 0,
-      "rating": 0
-    }
-  ]
-}
+```bash
+node scripts/build-index.js
 ```
+
+This will check that your `plugin.json` is valid and generate the index.
 
 ### 4. Submit a Pull Request
 
 - Ensure your plugin follows the structure guidelines
 - Include a README.md with usage instructions
 - Test your plugin locally before submitting
+
+The `plugins.json` index is **automatically generated** by GitHub Actions when your PR is merged - you don't need to update it manually!
 
 ### Plugin Categories
 

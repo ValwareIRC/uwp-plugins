@@ -4,9 +4,11 @@
     "version": "1.0.0",
     "description": "A comprehensive example plugin demonstrating all features of the UWP plugin system including hooks, navigation items, dashboard cards, and frontend JavaScript.",
     "author": "Valware",
+    "category": "utilities",
     "license": "MIT",
     "homepage": "https://github.com/ValwareIRC/uwp-plugins",
     "min_panel_version": "1.0.0",
+    "tags": ["example", "demo", "tutorial"],
     "hooks": [
         "OnStartup",
         "OnShutdown",
