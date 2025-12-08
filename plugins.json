@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generated_at": "2025-12-08T22:34:04.511Z",
+  "generated_at": "2025-12-08T22:34:15.172Z",
   "plugin_count": 3,
   "categories": [
     {
@@ -68,7 +68,7 @@
       "settings_schema": null,
       "has_readme": true,
       "has_icon": false,
-      "last_updated": "2025-12-08T02:02:56.596Z",
+      "last_updated": "2025-12-08T22:34:14.548Z",
       "downloads": 0,
       "rating": 0,
       "rating_count": 0
@@ -134,7 +134,7 @@
       },
       "has_readme": true,
       "has_icon": false,
-      "last_updated": "2025-12-08T02:09:07.765Z",
+      "last_updated": "2025-12-08T22:34:14.549Z",
       "downloads": 0,
       "rating": 0,
       "rating_count": 0
@@ -226,7 +226,7 @@
       },
       "has_readme": true,
       "has_icon": false,
-      "last_updated": "2025-12-08T22:34:04.434Z",
+      "last_updated": "2025-12-08T22:34:14.549Z",
       "downloads": 0,
       "rating": 0,
       "rating_count": 0
