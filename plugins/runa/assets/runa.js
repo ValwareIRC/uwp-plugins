@@ -105,7 +105,9 @@ The administrator will provide you with real-time data about their network inclu
 - Spamfilters
 - Server topology
 
-When answering questions, use this context to provide accurate, specific information about THEIR network.
+**IMPORTANT**: You have access to tools that let you fetch live data from the IRC network. When asked about users, channels, bans, servers, or network statistics, USE YOUR TOOLS to get the current data. Do not say you don't have access - you DO have tools available. Call the appropriate tool function to fetch the data.
+
+When answering questions, use your tools to get accurate, real-time information about THEIR network.
 
 ## Response Guidelines
 1. Format responses in Markdown for readability
@@ -241,10 +243,116 @@ When answering questions, use this context to provide accurate, specific informa
   // AI API Calls
   // ========================================
 
+  // Tool definitions for function calling
+  const TOOLS = [
+    {
+      type: 'function',
+      function: {
+        name: 'get_users',
+        description: 'Get a list of all connected users on the IRC network, including their nicknames, hostnames, and modes',
+        parameters: { type: 'object', properties: {}, required: [] }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'get_user_details',
+        description: 'Get detailed information about a specific user by nickname',
+        parameters: {
+          type: 'object',
+          properties: {
+            nickname: { type: 'string', description: 'The nickname of the user to look up' }
+          },
+          required: ['nickname']
+        }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'get_channels',
+        description: 'Get a list of all channels on the IRC network, including their topics and user counts',
+        parameters: { type: 'object', properties: {}, required: [] }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'get_channel_details',
+        description: 'Get detailed information about a specific channel',
+        parameters: {
+          type: 'object',
+          properties: {
+            channel: { type: 'string', description: 'The channel name (e.g., #general)' }
+          },
+          required: ['channel']
+        }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'get_server_bans',
+        description: 'Get all server bans including G-Lines, K-Lines, Z-Lines, and shuns',
+        parameters: { type: 'object', properties: {}, required: [] }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'get_spamfilters',
+        description: 'Get all configured spamfilters on the network',
+        parameters: { type: 'object', properties: {}, required: [] }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'get_servers',
+        description: 'Get information about all linked IRC servers in the network',
+        parameters: { type: 'object', properties: {}, required: [] }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'get_network_stats',
+        description: 'Get overall network statistics including user count, channel count, and server info',
+        parameters: { type: 'object', properties: {}, required: [] }
+      }
+    }
+  ];
+
+  // Execute a tool call
+  async function executeTool(name, args) {
+    console.log(`[Runa] Executing tool: ${name}`, args);
+    
+    switch (name) {
+      case 'get_users':
+        return await fetchSpecificData('users');
+      case 'get_user_details':
+        return await fetchSpecificData('users', args.nickname);
+      case 'get_channels':
+        return await fetchSpecificData('channels');
+      case 'get_channel_details':
+        return await fetchSpecificData('channels', args.channel);
+      case 'get_server_bans':
+        return await fetchSpecificData('bans');
+      case 'get_spamfilters':
+        return await fetchSpecificData('spamfilters');
+      case 'get_servers':
+        return await fetchSpecificData('servers');
+      case 'get_network_stats':
+        return await fetchNetworkContext();
+      default:
+        return { error: `Unknown tool: ${name}` };
+    }
+  }
+
   async function sendToAI(message) {
     const messages = [{
       role: 'system',
-      content: SYSTEM_PROMPT + (networkContext ? `\n\n## Current Network Data\n\`\`\`json\n${JSON.stringify(networkContext, null, 2)}\n\`\`\`` : '')
+      content: SYSTEM_PROMPT
     }];
 
     conversationHistory.forEach(msg => {
@@ -256,7 +364,7 @@ When answering questions, use this context to provide accurate, specific informa
     let response;
     switch (config.api_provider) {
       case 'openai':
-        response = await callOpenAI(messages);
+        response = await callOpenAIWithTools(messages);
         break;
       case 'anthropic':
         response = await callAnthropic(messages);
@@ -265,7 +373,7 @@ When answering questions, use this context to provide accurate, specific informa
         response = await callOllama(messages);
         break;
       case 'custom':
-        response = await callCustomAPI(messages);
+        response = await callCustomAPIWithTools(messages);
         break;
       default:
         throw new Error('Unknown API provider');
@@ -276,6 +384,61 @@ When answering questions, use this context to provide accurate, specific informa
     saveHistory();
 
     return response;
+  }
+
+  async function callOpenAIWithTools(messages) {
+    let currentMessages = [...messages];
+    let maxIterations = 5; // Prevent infinite loops
+    
+    while (maxIterations > 0) {
+      const res = await fetch(API_ENDPOINTS.openai, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.api_key}`
+        },
+        body: JSON.stringify({
+          model: config.model || 'gpt-4o-mini',
+          messages: currentMessages,
+          tools: TOOLS,
+          tool_choice: 'auto',
+          max_tokens: 2048,
+          temperature: 0.7
+        })
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error?.message || 'OpenAI API request failed');
+      }
+
+      const data = await res.json();
+      const assistantMessage = data.choices[0].message;
+
+      // Check if the model wants to call tools
+      if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
+        currentMessages.push(assistantMessage);
+        
+        // Execute each tool call
+        for (const toolCall of assistantMessage.tool_calls) {
+          const args = JSON.parse(toolCall.function.arguments || '{}');
+          const result = await executeTool(toolCall.function.name, args);
+          
+          currentMessages.push({
+            role: 'tool',
+            tool_call_id: toolCall.id,
+            content: JSON.stringify(result, null, 2)
+          });
+        }
+        
+        maxIterations--;
+      } else {
+        // No more tool calls, return the final response
+        return assistantMessage.content;
+      }
+    }
+    
+    throw new Error('Too many tool call iterations');
   }
 
   async function callOpenAI(messages) {
@@ -380,6 +543,73 @@ When answering questions, use this context to provide accurate, specific informa
 
     const data = await res.json();
     return data.choices?.[0]?.message?.content || data.content?.[0]?.text || data.content || data.response || data.message?.content || data.message;
+  }
+
+  async function callCustomAPIWithTools(messages) {
+    if (!config.api_endpoint) {
+      throw new Error('Custom API endpoint not configured');
+    }
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (config.api_key) {
+      headers['Authorization'] = `Bearer ${config.api_key}`;
+    }
+
+    let currentMessages = [...messages];
+    let maxIterations = 5;
+    
+    while (maxIterations > 0) {
+      const res = await fetch(config.api_endpoint, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+          model: config.model || 'openai',
+          messages: currentMessages,
+          tools: TOOLS,
+          tool_choice: 'auto',
+          max_tokens: 2048
+        })
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('[Runa] Custom API error:', errorText);
+        throw new Error(`API request failed: ${res.status} ${res.statusText}`);
+      }
+
+      const data = await res.json();
+      
+      // Handle different response formats
+      const assistantMessage = data.choices?.[0]?.message;
+      
+      if (!assistantMessage) {
+        // Fallback for APIs that don't support tools
+        return data.choices?.[0]?.message?.content || data.content?.[0]?.text || data.content || data.response || data.message?.content || data.message;
+      }
+
+      // Check if the model wants to call tools
+      if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
+        currentMessages.push(assistantMessage);
+        
+        for (const toolCall of assistantMessage.tool_calls) {
+          const args = JSON.parse(toolCall.function.arguments || '{}');
+          const result = await executeTool(toolCall.function.name, args);
+          
+          currentMessages.push({
+            role: 'tool',
+            tool_call_id: toolCall.id,
+            content: JSON.stringify(result, null, 2)
+          });
+        }
+        
+        maxIterations--;
+      } else {
+        return assistantMessage.content || data.content?.[0]?.text || data.content || data.response;
+      }
+    }
+    
+    throw new Error('Too many tool call iterations');
+  }
   }
 
   // ========================================
@@ -809,7 +1039,6 @@ When answering questions, use this context to provide accurate, specific informa
     showTypingIndicator();
 
     try {
-      await checkAndFetchRelevantData(message);
       const response = await sendToAI(message);
       hideTypingIndicator();
       addMessage('assistant', response);
@@ -821,49 +1050,6 @@ When answering questions, use this context to provide accurate, specific informa
       isLoading = false;
       if (sendBtn) sendBtn.disabled = false;
     }
-  }
-
-  async function checkAndFetchRelevantData(message) {
-    const lowerMsg = message.toLowerCase();
-    
-    if (lowerMsg.includes('user') || lowerMsg.includes('nick') || lowerMsg.includes('who')) {
-      const users = await fetchSpecificData('users');
-      if (users && networkContext) {
-        networkContext.users = Array.isArray(users) ? users : [];
-        networkContext.userCount = networkContext.users.length;
-      }
-    }
-    
-    if (lowerMsg.includes('channel') || lowerMsg.includes('#')) {
-      const channels = await fetchSpecificData('channels');
-      if (channels && networkContext) {
-        networkContext.channels = Array.isArray(channels) ? channels : [];
-        networkContext.channelCount = networkContext.channels.length;
-      }
-    }
-    
-    if (lowerMsg.includes('ban') || lowerMsg.includes('gline') || lowerMsg.includes('kline') || lowerMsg.includes('zline')) {
-      const bans = await fetchSpecificData('bans');
-      if (bans && networkContext) {
-        networkContext.bans = Array.isArray(bans) ? bans : [];
-      }
-    }
-    
-    if (lowerMsg.includes('spamfilter') || lowerMsg.includes('filter')) {
-      const filters = await fetchSpecificData('spamfilters');
-      if (filters && networkContext) {
-        networkContext.spamfilters = Array.isArray(filters) ? filters : [];
-      }
-    }
-    
-    if (lowerMsg.includes('server') || lowerMsg.includes('topology') || lowerMsg.includes('link')) {
-      const servers = await fetchSpecificData('servers');
-      if (servers && networkContext) {
-        networkContext.servers = Array.isArray(servers) ? servers : [];
-      }
-    }
-    
-    updateContextStatus();
   }
 
   function clearConversation() {
