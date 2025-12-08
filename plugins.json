@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generated_at": "2025-12-08T16:18:05.125Z",
+  "generated_at": "2025-12-08T20:39:56.534Z",
   "plugin_count": 3,
   "categories": [
     {
@@ -68,7 +68,7 @@
       "settings_schema": null,
       "has_readme": true,
       "has_icon": false,
-      "last_updated": "2025-12-08T16:18:02.777Z",
+      "last_updated": "2025-12-08T20:39:55.933Z",
       "downloads": 0,
       "rating": 0,
       "rating_count": 0
@@ -134,7 +134,7 @@
       },
       "has_readme": true,
       "has_icon": false,
-      "last_updated": "2025-12-08T16:18:02.778Z",
+      "last_updated": "2025-12-08T20:39:55.934Z",
       "downloads": 0,
       "rating": 0,
       "rating_count": 0
@@ -142,7 +142,7 @@
     {
       "id": "runa",
       "name": "Runa - AI Network Assistant",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": "ValwareIRC",
       "description": "Responsive UnrealIRCd Network Agent - An AI-powered assistant that can help you manage your IRC network using natural language",
       "category": "management",
@@ -164,22 +164,13 @@
         {
           "id": "runa-assistant",
           "label": "Runa AI",
-          "icon": "MessageSquare",
+          "icon": "Bot",
           "path": "/plugins/runa",
           "category": "Tools",
           "order": 50
         }
       ],
-      "dashboard_cards": [
-        {
-          "id": "runa-quick-access",
-          "title": "Runa AI Assistant",
-          "icon": "MessageSquare",
-          "type": "info",
-          "content": "Ask Runa anything about your IRC network! Press Ctrl+Shift+R to open the chat.",
-          "order": 90
-        }
-      ],
+      "dashboard_cards": [],
       "frontend_scripts": [
         "runa.js"
       ],
@@ -235,7 +226,7 @@
       },
       "has_readme": true,
       "has_icon": false,
-      "last_updated": "2025-12-08T16:18:02.778Z",
+      "last_updated": "2025-12-08T20:39:55.935Z",
       "downloads": 0,
       "rating": 0,
       "rating_count": 0
