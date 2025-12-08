@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generated_at": "2025-12-08T15:46:21.612Z",
+  "generated_at": "2025-12-08T16:18:05.125Z",
   "plugin_count": 3,
   "categories": [
     {
@@ -68,7 +68,7 @@
       "settings_schema": null,
       "has_readme": true,
       "has_icon": false,
-      "last_updated": "2025-12-08T02:02:56.596Z",
+      "last_updated": "2025-12-08T16:18:02.777Z",
       "downloads": 0,
       "rating": 0,
       "rating_count": 0
@@ -134,7 +134,7 @@
       },
       "has_readme": true,
       "has_icon": false,
-      "last_updated": "2025-12-08T02:09:07.765Z",
+      "last_updated": "2025-12-08T16:18:02.778Z",
       "downloads": 0,
       "rating": 0,
       "rating_count": 0
@@ -199,13 +199,13 @@
         "api_key": {
           "type": "string",
           "label": "API Key",
-          "description": "Your API key for the selected provider (stored locally in browser)",
+          "description": "API key (required for OpenAI/Anthropic, optional for custom endpoints)",
           "default": ""
         },
         "api_endpoint": {
           "type": "string",
-          "label": "Custom API Endpoint",
-          "description": "Custom API endpoint URL (for Ollama or custom providers)",
+          "label": "API Endpoint",
+          "description": "API endpoint URL (required for Ollama/Custom, e.g. https://text.pollinations.ai/openai)",
           "default": ""
         },
         "model": {
@@ -235,7 +235,7 @@
       },
       "has_readme": true,
       "has_icon": false,
-      "last_updated": "2025-12-08T15:35:51.906Z",
+      "last_updated": "2025-12-08T16:18:02.778Z",
       "downloads": 0,
       "rating": 0,
       "rating_count": 0
