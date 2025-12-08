@@ -454,26 +454,33 @@ Remember: You're helping real IRC administrators. Be accurate, helpful, and secu
       throw new Error('Custom API endpoint not configured');
     }
 
+    // Build headers - only include Authorization if API key is set
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    if (config.api_key) {
+      headers['Authorization'] = `Bearer ${config.api_key}`;
+    }
+
     const res = await fetch(config.api_endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.api_key}`
-      },
+      headers: headers,
       body: JSON.stringify({
-        model: config.model,
+        model: config.model || 'openai',
         messages: messages,
         max_tokens: 2048
       })
     });
 
     if (!res.ok) {
-      throw new Error('Custom API request failed');
+      const errorText = await res.text();
+      console.error('[Runa] Custom API error:', errorText);
+      throw new Error(`API request failed: ${res.status} ${res.statusText}`);
     }
 
     const data = await res.json();
     // Try to handle both OpenAI and custom response formats
-    return data.choices?.[0]?.message?.content || data.content || data.response || data.message;
+    return data.choices?.[0]?.message?.content || data.content?.[0]?.text || data.content || data.response || data.message?.content || data.message;
   }
 
   // ========================================
@@ -547,16 +554,16 @@ Remember: You're helping real IRC administrators. Be accurate, helpful, and secu
           </select>
         </div>
         
-        <div class="runa-setting-group">
+        <div class="runa-setting-group" id="runa-apikey-group">
           <label class="runa-setting-label">API Key</label>
-          <div class="runa-setting-help">Your API key is stored locally in your browser</div>
-          <input type="password" class="runa-setting-input" id="runa-apikey" placeholder="sk-... or your API key">
+          <div class="runa-setting-help">Required for OpenAI/Anthropic. Optional for custom endpoints.</div>
+          <input type="password" class="runa-setting-input" id="runa-apikey" placeholder="sk-... or leave empty">
         </div>
         
-        <div class="runa-setting-group" id="runa-endpoint-group" style="display: none;">
+        <div class="runa-setting-group" id="runa-endpoint-group">
           <label class="runa-setting-label">API Endpoint</label>
-          <div class="runa-setting-help">For Ollama: http://localhost:11434</div>
-          <input type="text" class="runa-setting-input" id="runa-endpoint" placeholder="http://localhost:11434">
+          <div class="runa-setting-help">Required for Ollama/Custom. e.g. https://text.pollinations.ai/openai</div>
+          <input type="text" class="runa-setting-input" id="runa-endpoint" placeholder="https://api.example.com/v1/chat/completions">
         </div>
         
         <div class="runa-setting-group">
@@ -649,10 +656,13 @@ Remember: You're helping real IRC administrators. Be accurate, helpful, and secu
     });
     input.addEventListener('input', () => autoResizeInput(input));
 
-    // Settings
+    // Settings - show/hide fields based on provider
     document.getElementById('runa-provider').addEventListener('change', (e) => {
-      const showEndpoint = ['ollama', 'custom'].includes(e.target.value);
+      const provider = e.target.value;
+      const showEndpoint = ['ollama', 'custom'].includes(provider);
+      const showApiKey = ['openai', 'anthropic'].includes(provider);
       document.getElementById('runa-endpoint-group').style.display = showEndpoint ? 'block' : 'none';
+      document.getElementById('runa-apikey-group').style.display = showApiKey ? 'block' : 'none';
     });
 
     document.getElementById('runa-settings-save').addEventListener('click', saveSettings);
@@ -725,9 +735,12 @@ Remember: You're helping real IRC administrators. Be accurate, helpful, and secu
       document.getElementById('runa-model').value = config.model;
       document.getElementById('runa-autofetch').checked = config.auto_fetch_context;
       
-      // Show/hide endpoint based on provider
-      const showEndpoint = ['ollama', 'custom'].includes(config.api_provider);
+      // Show/hide fields based on provider
+      const provider = config.api_provider;
+      const showEndpoint = ['ollama', 'custom'].includes(provider);
+      const showApiKey = ['openai', 'anthropic'].includes(provider);
       document.getElementById('runa-endpoint-group').style.display = showEndpoint ? 'block' : 'none';
+      document.getElementById('runa-apikey-group').style.display = showApiKey ? 'block' : 'none';
       
       settingsPanel.classList.add('visible');
     } else {
@@ -853,9 +866,17 @@ Remember: You're helping real IRC administrators. Be accurate, helpful, and secu
   async function sendMessage(message) {
     if (isLoading) return;
 
-    // Check if API is configured
-    if (!config.api_key && config.api_provider !== 'ollama') {
+    // Check if API is configured (API key only required for openai/anthropic)
+    const requiresApiKey = config.api_provider === 'openai' || config.api_provider === 'anthropic';
+    if (requiresApiKey && !config.api_key) {
       addSystemMessage('Please configure your API key in settings first!', 'error');
+      toggleSettings(true);
+      return;
+    }
+    
+    // Custom endpoint required for custom/ollama providers
+    if ((config.api_provider === 'custom' || config.api_provider === 'ollama') && !config.api_endpoint) {
+      addSystemMessage('Please configure the API endpoint in settings first!', 'error');
       toggleSettings(true);
       return;
     }
