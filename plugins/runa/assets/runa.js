@@ -1132,7 +1132,7 @@ When asked to perform an action, USE YOUR TOOLS. You can kill users, ban them, k
         <div class="runa-main">
           <div class="runa-header">
             <div class="runa-header-title">
-              <img src="/plugins/runa/assets/runa.png" alt="Runa" class="runa-logo-icon">
+              <img src="/api/plugins/runa/assets/runa.png" alt="Runa" class="runa-logo-icon">
               <span class="runa-logo-text">Runa</span>
             </div>
             <div class="runa-header-actions">
@@ -1148,7 +1148,7 @@ When asked to perform an action, USE YOUR TOOLS. You can kill users, ban them, k
           <div class="runa-view runa-chat-view active" id="runa-chat-view">
             <div class="runa-messages" id="runa-messages">
               <div class="runa-welcome">
-                <div class="runa-welcome-avatar"><img src="/plugins/runa/assets/runa.png" alt="Runa"></div>
+                <div class="runa-welcome-avatar"><img src="/api/plugins/runa/assets/runa.png" alt="Runa"></div>
                 <h2>Hi, I'm Runa!</h2>
                 <p>Your AI assistant for managing this IRC network. Ask me anything about users, channels, bans, or server configuration!</p>
                 <div class="runa-suggestions">
@@ -1359,7 +1359,7 @@ When asked to perform an action, USE YOUR TOOLS. You can kill users, ban them, k
     const messageDiv = document.createElement('div');
     messageDiv.className = `runa-message runa-message-${role}`;
 
-    const avatar = role === 'user' ? '👤' : `<img src="/plugins/runa/assets/runa.png" alt="Runa">`;
+    const avatar = role === 'user' ? '👤' : `<img src="/api/plugins/runa/assets/runa.png" alt="Runa">`;
     const name = role === 'user' ? 'You' : 'Runa';
 
     messageDiv.innerHTML = `
@@ -1393,7 +1393,7 @@ When asked to perform an action, USE YOUR TOOLS. You can kill users, ban them, k
     indicator.className = 'runa-message runa-message-assistant runa-typing';
     indicator.id = 'runa-typing';
     indicator.innerHTML = `
-      <div class="runa-message-avatar"><img src="/plugins/runa/assets/runa.png" alt="Runa"></div>
+      <div class="runa-message-avatar"><img src="/api/plugins/runa/assets/runa.png" alt="Runa"></div>
       <div class="runa-message-body">
         <div class="runa-message-name">Runa</div>
         <div class="runa-typing-indicator"><span></span><span></span><span></span></div>
@@ -1607,7 +1607,7 @@ When asked to perform an action, USE YOUR TOOLS. You can kill users, ban them, k
     if (messagesContainer) {
       messagesContainer.innerHTML = `
         <div class="runa-welcome">
-          <div class="runa-welcome-avatar"><img src="/plugins/runa/assets/runa.png" alt="Runa"></div>
+          <div class="runa-welcome-avatar"><img src="/api/plugins/runa/assets/runa.png" alt="Runa"></div>
           <h2>Hi, I'm Runa!</h2>
           <p>Your AI assistant for managing this IRC network. Ask me anything about users, channels, bans, or server configuration!</p>
           <div class="runa-suggestions">
