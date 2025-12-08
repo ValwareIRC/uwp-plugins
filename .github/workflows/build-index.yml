@@ -1,0 +1,75 @@
+name: Build Plugin Index
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'plugins/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'plugins/**'
+  workflow_dispatch:
+
+jobs:
+  build-index:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build plugin index
+        run: |
+          node scripts/build-index.js
+
+      - name: Validate plugins
+        run: |
+          node scripts/validate-plugins.js
+
+      - name: Commit updated index
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add plugins.json
+          git diff --staged --quiet || git commit -m "Auto-update plugin index [skip ci]"
+          git push
+
+  validate-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate new/changed plugins
+        run: |
+          node scripts/validate-plugins.js --strict
+
+      - name: Check for required files
+        run: |
+          for dir in plugins/*/; do
+            if [ -d "$dir" ]; then
+              plugin_id=$(basename "$dir")
+              
+              # Check for plugin.json
+              if [ ! -f "${dir}plugin.json" ]; then
+                echo "❌ Missing plugin.json in $plugin_id"
+                exit 1
+              fi
+              
+              echo "✅ $plugin_id has required files"
+            fi
+          done

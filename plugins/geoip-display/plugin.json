@@ -1,0 +1,34 @@
+{
+  "id": "geoip-display",
+  "name": "GeoIP Display",
+  "version": "1.0.0",
+  "author": "ValwareIRC",
+  "description": "Displays geographic location information for connected users including country and city data.",
+  "category": "monitoring",
+  "license": "MIT",
+  "repository": "https://github.com/ValwareIRC/uwp-plugins",
+  "tags": ["geoip", "location", "geography", "users"],
+  "min_panel_version": "2.0.0",
+  "entry_point": "main.go",
+  "hooks": ["on_user_connect", "on_api_request"],
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "geoip_database": {
+        "type": "string",
+        "description": "Path to MaxMind GeoIP database file",
+        "default": "/usr/share/GeoIP/GeoLite2-City.mmdb"
+      },
+      "show_city": {
+        "type": "boolean",
+        "description": "Show city-level detail",
+        "default": true
+      },
+      "show_region": {
+        "type": "boolean", 
+        "description": "Show region/state",
+        "default": true
+      }
+    }
+  }
+}
