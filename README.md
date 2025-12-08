@@ -117,4 +117,4 @@ The `plugins.json` file in the root of this repository is automatically generate
 
 ## License
 
-This repository and its contents are licensed under the MIT License unless otherwise specified in individual plugin directories.
+This repository and its contents are licensed under the GPLv3 License unless otherwise specified in individual plugin directories.
