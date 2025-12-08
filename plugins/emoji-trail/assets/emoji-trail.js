@@ -2,19 +2,25 @@
  * Emoji Trail Plugin for UnrealIRCd Web Panel
  * Creates delightful emoji fireworks when pressing the 'E' key
  * 
- * @version 1.0.0
+ * @version 1.0.1
  * @author ValwareIRC
  * @license MIT
  */
 (function() {
   'use strict';
 
+  // Check if already loaded - don't double-register
+  if (window.EmojiTrail && window.EmojiTrail._initialized) {
+    console.log('🎉 Emoji Trail already loaded, skipping');
+    return;
+  }
+
   // Emoji sets - different themes for variety
   const emojiSets = {
     party: ['🎉', '🎊', '🥳', '🎈', '🎁', '✨', '💫', '🌟', '⭐', '🎇', '🎆', '🪅'],
     nature: ['🌸', '🌺', '🌻', '🌷', '🌹', '🍀', '🌿', '🍃', '🦋', '🐝', '🌈', '☀️'],
     hearts: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '💖', '💝', '💗', '💓'],
-    stars: ['⭐', '🌟', '✨', '💫', '🌠', '⚡', '🔥', '💥', '☄️', '🌙', '🌛', '🌜'],
+    stars: ['⭐', '🌟', '✨', '💫', '��', '⚡', '🔥', '💥', '☄️', '🌙', '🌛', '🌜'],
     food: ['🍕', '🍔', '🍟', '🌮', '🍩', '🍪', '🎂', '🍰', '🧁', '🍭', '🍬', '🍫'],
     random: ['🎉', '🌟', '❤️', '🦄', '🌈', '🔥', '💎', '🎸', '🚀', '🎨', '🎭', '🎪']
   };
@@ -32,29 +38,23 @@
   let mouseX = window.innerWidth / 2;
   let mouseY = window.innerHeight / 2;
 
-  // Mouse tracking
-  document.addEventListener('mousemove', function(e) {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-  });
-
   // Create a single emoji particle element
   function createParticle(x, y, emoji) {
     const particle = document.createElement('div');
     particle.className = 'uwp-emoji-particle';
     particle.textContent = emoji;
-    particle.style.cssText = `
+    particle.style.cssText = \`
       position: fixed;
       pointer-events: none;
       z-index: 999999;
       font-size: 24px;
-      left: ${x}px;
-      top: ${y}px;
+      left: \${x}px;
+      top: \${y}px;
       transform: translate(-50%, -50%);
       user-select: none;
       will-change: transform, opacity;
       text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    `;
+    \`;
     document.body.appendChild(particle);
     return particle;
   }
@@ -67,7 +67,7 @@
     
     // Calculate end position
     const endX = startX + Math.cos(angle) * distance;
-    const endY = startY + Math.sin(angle) * distance - 50; // Float up slightly
+    const endY = startY + Math.sin(angle) * distance - 50;
     
     // Random rotation for variety
     const rotation = (Math.random() - 0.5) * 720;
@@ -92,7 +92,7 @@
       
       particle.style.left = currentX + 'px';
       particle.style.top = currentY + 'px';
-      particle.style.transform = `translate(-50%, -50%) scale(${scale}) rotate(${rotation * progress}deg)`;
+      particle.style.transform = \`translate(-50%, -50%) scale(\${scale}) rotate(\${rotation * progress}deg)\`;
       particle.style.opacity = opacity;
       
       if (progress < 1) {
@@ -114,16 +114,10 @@
     const burstSize = config.burstSize;
     
     for (let i = 0; i < count; i++) {
-      // Spread particles in a circle with some randomness
       const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5) * 0.5;
-      
-      // Vary the distance for natural look
       const distance = burstSize * (0.5 + Math.random() * 0.5);
-      
-      // Random emoji from the set
       const emoji = emojis[Math.floor(Math.random() * emojis.length)];
       
-      // Stagger particle creation for cascade effect
       setTimeout(function() {
         const particle = createParticle(x, y, emoji);
         animateParticle(particle, angle, distance, 800 + Math.random() * 400);
@@ -131,8 +125,13 @@
     }
   }
 
-  // Listen for key press
-  document.addEventListener('keydown', function(e) {
+  // Named event handlers for cleanup
+  function handleMouseMove(e) {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  }
+
+  function handleKeyDown(e) {
     // Check if the key matches (case insensitive)
     if (e.key.toLowerCase() !== config.triggerKey.toLowerCase()) return;
 
@@ -148,10 +147,31 @@
 
     // Create burst at mouse position
     createBurst(mouseX, mouseY);
-  });
+  }
+
+  // Register event listeners
+  document.addEventListener('mousemove', handleMouseMove);
+  document.addEventListener('keydown', handleKeyDown);
+
+  // Cleanup function - removes event listeners
+  function cleanup() {
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('keydown', handleKeyDown);
+    
+    // Remove any lingering particles
+    document.querySelectorAll('.uwp-emoji-particle').forEach(el => el.remove());
+    
+    console.log('🎉 Emoji Trail plugin unloaded');
+    
+    // Mark as not initialized
+    if (window.EmojiTrail) {
+      window.EmojiTrail._initialized = false;
+    }
+  }
 
   // Expose API for configuration
   window.EmojiTrail = {
+    _initialized: true,
     setConfig: function(newConfig) {
       Object.assign(config, newConfig);
     },
@@ -171,8 +191,14 @@
     },
     disable: function() {
       config.enabled = false;
-    }
+    },
+    cleanup: cleanup
   };
+
+  // Register with UWP plugin system if available
+  if (window.UWPPlugins) {
+    window.UWPPlugins.register('emoji-trail', { cleanup: cleanup });
+  }
 
   // Log successful load
   console.log('🎉 Emoji Trail plugin loaded! Press "E" to see the magic!');
