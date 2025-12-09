@@ -42,7 +42,6 @@
 }
 
 .runa-logo-icon {
-  font-size: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -138,7 +137,6 @@
 }
 
 .runa-welcome-avatar {
-  font-size: 64px;
   margin-bottom: 16px;
 }
 
@@ -207,7 +205,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
   flex-shrink: 0;
 }
 
